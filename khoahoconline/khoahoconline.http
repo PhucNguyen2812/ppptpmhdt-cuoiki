@@ -1,0 +1,6 @@
+@khoahoconline_HostAddress = http://localhost:5228
+
+GET {{khoahoconline_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
