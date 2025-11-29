@@ -14,15 +14,13 @@ public partial class Chuong
 
     public int? IdKhoaHoc { get; set; }
 
-    [StringLength(200)]
+    [StringLength(255)]
     public string? TenChuong { get; set; }
 
-    [StringLength(1000)]
-    public string? MucTieu { get; set; }
+    [StringLength(500)]
+    public string? MoTa { get; set; }
 
-    public int ThuTu { get; set; }
-
-    public int? SoLuongBaiGiang { get; set; }
+    public int? ThuTu { get; set; }
 
     public bool? TrangThai { get; set; }
 
@@ -32,10 +30,10 @@ public partial class Chuong
     [Column(TypeName = "datetime")]
     public DateTime? NgayCapNhat { get; set; }
 
-    [InverseProperty("IdChuongNavigation")]
-    public virtual ICollection<BaiGiang> BaiGiangs { get; set; } = new List<BaiGiang>();
-
     [ForeignKey("IdKhoaHoc")]
     [InverseProperty("Chuongs")]
     public virtual KhoaHoc? IdKhoaHocNavigation { get; set; }
+
+    [InverseProperty("IdChuongNavigation")]
+    public virtual ICollection<BaiGiang> BaiGiangs { get; set; } = new List<BaiGiang>();
 }

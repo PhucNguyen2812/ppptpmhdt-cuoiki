@@ -1,5 +1,4 @@
-﻿
-using Microsoft.EntityFrameworkCore.Storage;
+﻿using Microsoft.EntityFrameworkCore.Storage;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
@@ -12,6 +11,8 @@ namespace khoahoconline.Data.Repositories.Impl
         private NguoiDungRepository? _nguoiDungRepository;
         private RefreshTokenRepository? _refreshTokenRepository;
         private VaiTroRepository? _vaiTroRepository;
+        private DanhMucRepository? _danhMucRepository;
+        private KhoaHocRepository? _khoaHocRepository;
 
         public UnitOfWork(CourseOnlDbContext context)
         {
@@ -26,6 +27,12 @@ namespace khoahoconline.Data.Repositories.Impl
 
         public INguoiDungRepository NguoiDungRepository =>
             _nguoiDungRepository ??= new NguoiDungRepository(_context);
+
+        public IDanhMucRepository DanhMucRepository =>
+            _danhMucRepository ??= new DanhMucRepository(_context);
+
+        public IKhoaHocRepository KhoaHocRepository =>
+            _khoaHocRepository ??= new KhoaHocRepository(_context);
 
         public async Task BeginTransactionAsync()
         {

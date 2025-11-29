@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UHIHI - Nền tảng học trực tuyến hàng đầu</title>
+    <link rel="stylesheet" href="../css/reset.css">
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-top">
+            <div class="container">
+                <div class="header-content">
+                    <!-- Logo -->
+                    <div class="logo">
+                        <a href="/">
+                            <h1>UHIHI</h1>
+                        </a>
+                    </div>
+
+                    <!-- Search Bar -->
+                    <div class="search-bar">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchInput" placeholder="Tìm kiếm nội dung bất kỳ">
+                    </div>
+
+                    <!-- Header Actions -->
+                    <div class="header-actions">
+                        <!-- Instructor Button (conditional) -->
+                        <button id="instructorBtn" class="instructor-btn" style="display: none;">
+                            Giảng viên
+                        </button>
+                        <button id="teachBtn" class="teach-btn">
+                            Giảng dạy trên UHIHI
+                        </button>
+
+                        <!-- Shopping Cart -->
+                        <div class="cart-icon">
+                            <a href="#" id="cartLink">
+                                <i class="fas fa-shopping-cart"></i>
+                                <span class="badge" id="cartBadge">0</span>
+                            </a>
+                        </div>
+
+                        <!-- User Menu -->
+                        <div class="user-menu" id="userMenu" style="display: none;">
+                            <div class="avatar-wrapper">
+                                <img src="assets/default-avatar.png" alt="User Avatar" id="userAvatar" class="avatar">
+                            </div>
+                            <!-- Dropdown Menu -->
+                            <div class="dropdown-menu" id="dropdownMenu">
+                                <div class="user-info">
+                                    <img src="assets/default-avatar.png" alt="Avatar" id="dropdownAvatar">
+                                    <div>
+                                        <strong id="userName">User Name</strong>
+                                        <p id="userEmail">user@email.com</p>
+                                    </div>
+                                </div>
+                                <div class="dropdown-divider"></div>
+                                <a href="my-learning.html"><i class="fas fa-book"></i> Học tập của tôi</a>
+                                <a href="my-cart.html"><i class="fas fa-shopping-cart"></i> Giỏ hàng</a>
+                                <div class="dropdown-divider"></div>
+                                <a href="profile.html"><i class="fas fa-user"></i> Hồ sơ công khai</a>
+                                <a href="account.html"><i class="fas fa-cog"></i> Cài đặt tài khoản</a>
+                                <div class="dropdown-divider"></div>
+                                <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Đăng xuất</a>
+                            </div>
+                        </div>
+
+                        <!-- Login/Register Buttons (show when not logged in) -->
+                        <div class="auth-buttons" id="authButtons">
+                            <button class="btn-login" id="loginBtn">Đăng nhập</button>
+                            <button class="btn-signup" id="signupBtn">Đăng ký</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Category Navigation -->
+        <div class="header-nav">
+            <div class="container">
+                <nav class="category-nav" id="categoryNav">
+                    <!-- Categories will be loaded dynamically -->
+                    <div class="skeleton-loader">
+                        <div class="skeleton-item"></div>
+                        <div class="skeleton-item"></div>
+                        <div class="skeleton-item"></div>
+                    </div>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Hero Banner -->
+        <section class="hero-banner">
+            <div class="container">
+                <div class="hero-content">
+                    <div class="hero-text">
+                        <h1>Học nhiều hơn, chi tiêu ít hơn — Giảm giá Cyber Monday có giá từ...</h1>
+                        <p>Giảm giá toàn trang web cho hàng ngàn khóa học. Ưu đãi sẽ kết thúc vào ngày 01 tháng 12.</p>
+                        <button class="btn-primary">Tiết kiệm ngay</button>
+                    </div>
+                    <div class="hero-image">
+                        <img src="assets/hero-image.png" alt="Learning" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23ddd%22 width=%22400%22 height=%22300%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 font-family=%22Arial%22 font-size=%2220%22 fill=%22%23999%22 text-anchor=%22middle%22 dy=%22.3em%22%3EHero Image%3C/text%3E%3C/svg%3E'">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Featured Courses -->
+        <section class="courses-section">
+            <div class="container">
+                <h2>Khóa học nổi bật</h2>
+                <div class="courses-grid" id="featuredCourses">
+                    <!-- Loading skeleton -->
+                    <div class="course-skeleton"></div>
+                    <div class="course-skeleton"></div>
+                    <div class="course-skeleton"></div>
+                    <div class="course-skeleton"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Best Selling Courses -->
+        <section class="courses-section bg-gray">
+            <div class="container">
+                <h2>Khóa học bán chạy nhất</h2>
+                <div class="courses-grid" id="bestSellingCourses">
+                    <!-- Loading skeleton -->
+                    <div class="course-skeleton"></div>
+                    <div class="course-skeleton"></div>
+                    <div class="course-skeleton"></div>
+                    <div class="course-skeleton"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Newest Courses -->
+        <section class="courses-section">
+            <div class="container">
+                <h2>Khóa học mới nhất</h2>
+                <div class="courses-grid" id="newestCourses">
+                    <!-- Loading skeleton -->
+                    <div class="course-skeleton"></div>
+                    <div class="course-skeleton"></div>
+                    <div class="course-skeleton"></div>
+                    <div class="course-skeleton"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Categories Section -->
+        <section class="categories-section">
+            <div class="container">
+                <h2>Khám phá các chủ đề hàng đầu</h2>
+                <div class="categories-grid" id="categoriesGrid">
+                    <!-- Categories will be loaded dynamically -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-column">
+                    <h4>UHIHI Business</h4>
+                    <ul>
+                        <li><a href="#">Giảng dạy trên UHIHI</a></li>
+                        <li><a href="#">Tải ứng dụng</a></li>
+                        <li><a href="#">Giới thiệu</a></li>
+                        <li><a href="#">Liên hệ</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h4>Nghề nghiệp</h4>
+                    <ul>
+                        <li><a href="#">Blog</a></li>
+                        <li><a href="#">Trợ giúp và hỗ trợ</a></li>
+                        <li><a href="#">Đối tác</a></li>
+                        <li><a href="#">Nhà đầu tư</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h4>Điều khoản</h4>
+                    <ul>
+                        <li><a href="#">Điều khoản</a></li>
+                        <li><a href="#">Chính sách quyền riêng tư</a></li>
+                        <li><a href="#">Cài đặt cookie</a></li>
+                        <li><a href="#">Sơ đồ trang web</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <div class="footer-logo">
+                    <h3>UHIHI</h3>
+                </div>
+                <div class="footer-copyright">
+                    <p>&copy; 2024 UHIHI, Inc.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script type="module" src="../js/pages/home.js"></script>
+</body>
+</html>

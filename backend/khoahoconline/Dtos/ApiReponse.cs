@@ -1,6 +1,6 @@
 ﻿namespace khoahoconline.Dtos
 {
-    public class ApiResponse<T> where T : class
+    public class ApiResponse<T>
     {
         public bool Success { get; set; }
         public string? Message { get; set; }
@@ -16,12 +16,22 @@
 
         public static ApiResponse<T> SuccessResponse(T? data)
         {
-            return new ApiResponse<T>(true, "Thành công.", data);
+            return new ApiResponse<T>(true, "Success", data);
+        }
+
+        public static ApiResponse<T> SuccessResponse(T? data, string message)
+        {
+            return new ApiResponse<T>(true, message, data);
+        }
+
+        public static ApiResponse<T> ErrorResponse(string message)
+        {
+            return new ApiResponse<T>(false, message, default);
         }
 
         public static ApiResponse<T> FailureResponse(string message)
         {
-            return new ApiResponse<T>(false, message, null);
+            return new ApiResponse<T>(false, message, default);
         }
     }
 }

@@ -5,6 +5,8 @@
         INguoiDungRepository NguoiDungRepository { get; }
         IRefreshTokenRepository RefreshTokenRepository { get; }
         IVaiTroRepository VaiTroRepository { get; }
+        IKhoaHocRepository KhoaHocRepository { get; }
+        IDanhMucRepository DanhMucRepository { get; }
 
         Task<int> SaveChangesAsync();
         Task BeginTransactionAsync();

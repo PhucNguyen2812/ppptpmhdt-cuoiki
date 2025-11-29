@@ -56,5 +56,44 @@ namespace khoahoconline.Data.Repositories.Impl
             _dbSet.Update(entity);
             return Task.CompletedTask;
         }
+
+        public async Task<NguoiDung?> GetByIdWithRolesAsync(int id)
+        {
+            return await _dbSet.AsNoTracking()
+                .Include(nd => nd.NguoiDungVaiTros)
+                    .ThenInclude(ndvt => ndvt.IdVaiTroNavigation)
+                .FirstOrDefaultAsync(nd => nd.Id == id);
+        }
+
+        public async Task<bool> HasRoleAsync(int userId, string roleName)
+        {
+            return await _context.NguoiDungVaiTros
+                .AnyAsync(ndvt => ndvt.IdNguoiDung == userId 
+                    && ndvt.IdVaiTroNavigation!.TenVaiTro == roleName);
+        }
+
+        public async Task AddRoleToUserAsync(int userId, int roleId)
+        {
+            var exists = await _context.NguoiDungVaiTros
+                .AnyAsync(ndvt => ndvt.IdNguoiDung == userId && ndvt.IdVaiTro == roleId);
+
+            if (!exists)
+            {
+                var nguoiDungVaiTro = new NguoiDungVaiTro
+                {
+                    IdNguoiDung = userId,
+                    IdVaiTro = roleId
+                };
+                await _context.NguoiDungVaiTros.AddAsync(nguoiDungVaiTro);
+            }
+        }
+
+        public async Task<List<string>> GetUserRolesAsync(int userId)
+        {
+            return await _context.NguoiDungVaiTros
+                .Where(ndvt => ndvt.IdNguoiDung == userId)
+                .Select(ndvt => ndvt.IdVaiTroNavigation!.TenVaiTro)
+                .ToListAsync();
+        }
     }
 }

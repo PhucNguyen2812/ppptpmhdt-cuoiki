@@ -36,6 +36,8 @@ builder.Services.AddScoped<INguoiDungRepository, NguoiDungRepository>();
 builder.Services.AddScoped<INguoiDungService, NguoiDungService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IDanhMucService, DanhMucService>();
+builder.Services.AddScoped<IKhoaHocService, KhoaHocService>();
 
 // authentication & authorization
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -97,6 +99,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Serve static files (for uploaded avatars, images, etc.)
+app.UseStaticFiles();
 
 // Custom exception middleware
 app.UseMiddleware<ExceptionMiddleware>();
