@@ -18,7 +18,7 @@ public partial class Chuong
     public string? TenChuong { get; set; }
 
     [StringLength(500)]
-    public string? MoTa { get; set; }
+    public string? MoTa { get; set; }  // ✅ ADDED: Property mới
 
     public int? ThuTu { get; set; }
 

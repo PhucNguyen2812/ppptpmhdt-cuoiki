@@ -95,5 +95,6 @@ namespace khoahoconline.Data.Repositories.Impl
                 .Select(ndvt => ndvt.IdVaiTroNavigation!.TenVaiTro)
                 .ToListAsync();
         }
+        
     }
 }

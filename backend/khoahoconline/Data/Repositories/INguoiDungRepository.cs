@@ -9,5 +9,10 @@ namespace khoahoconline.Data.Repositories
         Task<PagedResult<NguoiDung>> GetPagedListAsync(int pageNumber, int pageSize, bool active, string? searchTerm = null);
         Task SoftDelete(NguoiDung entity);
         Task<NguoiDung?> GetByEmailAsync(string username);
+        
+        Task<NguoiDung?> GetByIdWithRolesAsync(int id);
+        Task<bool> HasRoleAsync(int userId, string roleName);
+        Task AddRoleToUserAsync(int userId, int roleId);
+        Task<List<string>> GetUserRolesAsync(int userId);
     }
 }

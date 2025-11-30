@@ -55,11 +55,19 @@ public partial class KhoaHoc
     [Column(TypeName = "datetime")]
     public DateTime? NgayCapNhat { get; set; }
 
-    [InverseProperty("IdKhoaHocNavigation")]
-    public virtual ICollection<ChiaSeLuanNhuan> ChiaSeLuanNhuans { get; set; } = new List<ChiaSeLuanNhuan>();
+    // ===== NAVIGATION PROPERTIES =====
 
+    [ForeignKey("IdDanhMuc")]
+    [InverseProperty("KhoaHocs")]
+    public virtual DanhMucKhoaHoc? IdDanhMucNavigation { get; set; }
+
+    [ForeignKey("IdGiangVien")]
+    [InverseProperty("KhoaHocs")]
+    public virtual NguoiDung? IdGiangVienNavigation { get; set; }
+
+    // ✅ THÊM: Navigation property cho ChiTietChiaSeDoanhThu
     [InverseProperty("IdKhoaHocNavigation")]
-    public virtual ICollection<ChiTietDonHang> ChiTietDonHangs { get; set; } = new List<ChiTietDonHang>();
+    public virtual ICollection<ChiTietChiaSeDoanhThu> ChiTietChiaSeDoanhThus { get; set; } = new List<ChiTietChiaSeDoanhThu>();
 
     [InverseProperty("IdKhoaHocNavigation")]
     public virtual ICollection<ChiTietGioHang> ChiTietGioHangs { get; set; } = new List<ChiTietGioHang>();
@@ -73,14 +81,10 @@ public partial class KhoaHoc
     [InverseProperty("IdKhoaHocNavigation")]
     public virtual ICollection<DanhGiaKhoaHoc> DanhGiaKhoaHocs { get; set; } = new List<DanhGiaKhoaHoc>();
 
-    [ForeignKey("IdDanhMuc")]
-    [InverseProperty("KhoaHocs")]
-    public virtual DanhMucKhoaHoc? IdDanhMucNavigation { get; set; }
-
-    [ForeignKey("IdGiangVien")]
-    [InverseProperty("KhoaHocs")]
-    public virtual NguoiDung? IdGiangVienNavigation { get; set; }
-
     [InverseProperty("IdKhoaHocNavigation")]
     public virtual ICollection<KhoaHocKhuyenMai> KhoaHocKhuyenMais { get; set; } = new List<KhoaHocKhuyenMai>();
+
+    // ✅ THÊM: Navigation property cho TienDoHocTap
+    [InverseProperty("IdKhoaHocNavigation")]
+    public virtual ICollection<TienDoHocTap> TienDoHocTaps { get; set; } = new List<TienDoHocTap>();
 }

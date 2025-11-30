@@ -17,48 +17,29 @@ public partial class CourseOnlDbContext : DbContext
     }
 
     public virtual DbSet<BaiGiang> BaiGiangs { get; set; }
-
     public virtual DbSet<ChiTietChiaSeDoanhThu> ChiTietChiaSeDoanhThus { get; set; }
-
     public virtual DbSet<ChiTietGioHang> ChiTietGioHangs { get; set; }
-
     public virtual DbSet<Chuong> Chuongs { get; set; }
-
     public virtual DbSet<DangKyKhoaHoc> DangKyKhoaHocs { get; set; }
-
     public virtual DbSet<DanhGiaKhoaHoc> DanhGiaKhoaHocs { get; set; }
-
     public virtual DbSet<DanhMucKhoaHoc> DanhMucKhoaHocs { get; set; }
-
     public virtual DbSet<DonHang> DonHangs { get; set; }
-
     public virtual DbSet<GioHang> GioHangs { get; set; }
-
     public virtual DbSet<KhoaHoc> KhoaHocs { get; set; }
-
     public virtual DbSet<KhoaHocKhuyenMai> KhoaHocKhuyenMais { get; set; }
-
     public virtual DbSet<KhuyenMai> KhuyenMais { get; set; }
-
     public virtual DbSet<LichSuChuyenTien> LichSuChuyenTiens { get; set; }
-
     public virtual DbSet<NguoiDung> NguoiDungs { get; set; }
-
     public virtual DbSet<NguoiDungVaiTro> NguoiDungVaiTros { get; set; }
-
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
-
     public virtual DbSet<TaiLieuBaiGiang> TaiLieuBaiGiangs { get; set; }
-
     public virtual DbSet<TienDoHocTap> TienDoHocTaps { get; set; }
-
     public virtual DbSet<TienDoHocTapChiTiet> TienDoHocTapChiTiets { get; set; }
-
     public virtual DbSet<VaiTro> VaiTros { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Server=DESKTOP-170JDGQ;Database=cuoikyoopQuanLyKhoaHocTrucTuyen1;User Id=sa;Password=thaithong123;TrustServerCertificate=True;");
+#warning To protect potentially sensitive information in your connection string, you should move it out of source code.
+        => optionsBuilder.UseSqlServer("Server=DESKTOP-DO90RJI;Database=cuoikyoopQuanLyKhoaHocTrucTuyen;User Id=sa;Password=phuc123;TrustServerCertificate=True;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -66,12 +47,14 @@ public partial class CourseOnlDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("PK__BaiGiang__3214EC071FEAD29F");
 
-            entity.Property(e => e.MienPhiXem).HasDefaultValue(false);
+            // ✅ FIXED: Đổi từ MienPhiXem → XemThuMienPhi
+            entity.Property(e => e.XemThuMienPhi).HasDefaultValue(false);
             entity.Property(e => e.NgayCapNhat).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.NgayTao).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.TrangThai).HasDefaultValue(true);
 
-            entity.HasOne(d => d.IdChuongNavigation).WithMany(p => p.BaiGiangs).HasConstraintName("FK_BaiGiang_Chuong");
+            entity.HasOne(d => d.IdChuongNavigation).WithMany(p => p.BaiGiangs)
+                .HasConstraintName("FK_BaiGiang_Chuong");
         });
 
         modelBuilder.Entity<ChiTietChiaSeDoanhThu>(entity =>
@@ -95,7 +78,8 @@ public partial class CourseOnlDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("PK__ChiTietG__3214EC075971A2B8");
 
-            entity.HasOne(d => d.IdGioHangNavigation).WithMany(p => p.ChiTietGioHangs).HasConstraintName("FK_ChiTietGioHang_GioHang");
+            entity.HasOne(d => d.IdGioHangNavigation).WithMany(p => p.ChiTietGioHangs)
+                .HasConstraintName("FK_ChiTietGioHang_GioHang");
 
             entity.HasOne(d => d.IdKhoaHocNavigation).WithMany(p => p.ChiTietGioHangs)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -108,7 +92,7 @@ public partial class CourseOnlDbContext : DbContext
 
             entity.Property(e => e.NgayCapNhat).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.NgayTao).HasDefaultValueSql("(getdate())");
-            entity.Property(e => e.SoLuongBaiGiang).HasDefaultValue(0);
+            // ✅ REMOVED: Không còn property SoLuongBaiGiang
             entity.Property(e => e.TrangThai).HasDefaultValue(true);
 
             entity.HasOne(d => d.IdKhoaHocNavigation).WithMany(p => p.Chuongs)
@@ -123,7 +107,8 @@ public partial class CourseOnlDbContext : DbContext
             entity.Property(e => e.NgayDangKy).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.TrangThai).HasDefaultValue(true);
 
-            entity.HasOne(d => d.IdDonHangNavigation).WithMany(p => p.DangKyKhoaHocs).HasConstraintName("FK_DangKyKhoaHoc_DonHang");
+            entity.HasOne(d => d.IdDonHangNavigation).WithMany(p => p.DangKyKhoaHocs)
+                .HasConstraintName("FK_DangKyKhoaHoc_DonHang");
 
             entity.HasOne(d => d.IdHocVienNavigation).WithMany(p => p.DangKyKhoaHocs)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -145,7 +130,8 @@ public partial class CourseOnlDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_DanhGiaKhoaHoc_HocVien");
 
-            entity.HasOne(d => d.IdKhoaHocNavigation).WithMany(p => p.DanhGiaKhoaHocs).HasConstraintName("FK_DanhGiaKhoaHoc_KhoaHoc");
+            entity.HasOne(d => d.IdKhoaHocNavigation).WithMany(p => p.DanhGiaKhoaHocs)
+                .HasConstraintName("FK_DanhGiaKhoaHoc_KhoaHoc");
         });
 
         modelBuilder.Entity<DanhMucKhoaHoc>(entity =>
@@ -175,7 +161,8 @@ public partial class CourseOnlDbContext : DbContext
             entity.Property(e => e.NgayCapNhat).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.NgayTao).HasDefaultValueSql("(getdate())");
 
-            entity.HasOne(d => d.IdNguoiDungNavigation).WithOne(p => p.GioHang).HasConstraintName("FK_GioHang_NguoiDung");
+            entity.HasOne(d => d.IdNguoiDungNavigation).WithOne(p => p.GioHang)
+                .HasConstraintName("FK_GioHang_NguoiDung");
         });
 
         modelBuilder.Entity<KhoaHoc>(entity =>
@@ -185,7 +172,8 @@ public partial class CourseOnlDbContext : DbContext
             entity.Property(e => e.DiemDanhGia).HasDefaultValue(0.0m);
             entity.Property(e => e.NgayCapNhat).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.NgayTao).HasDefaultValueSql("(getdate())");
-            entity.Property(e => e.SoHocVien).HasDefaultValue(0);
+            // ✅ FIXED: Đổi từ SoHocVien → SoLuongHocVien
+            entity.Property(e => e.SoLuongHocVien).HasDefaultValue(0);
             entity.Property(e => e.SoLuongDanhGia).HasDefaultValue(0);
             entity.Property(e => e.TrangThai).HasDefaultValue(true);
 
@@ -209,7 +197,8 @@ public partial class CourseOnlDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK_KhoaHocKhuyenMai_KhoaHoc");
 
-            entity.HasOne(d => d.IdKhuyenMaiNavigation).WithMany(p => p.KhoaHocKhuyenMais).HasConstraintName("FK_KhoaHocKhuyenMai_KhuyenMai");
+            entity.HasOne(d => d.IdKhuyenMaiNavigation).WithMany(p => p.KhoaHocKhuyenMais)
+                .HasConstraintName("FK_KhoaHocKhuyenMai_KhuyenMai");
         });
 
         modelBuilder.Entity<KhuyenMai>(entity =>
@@ -221,7 +210,8 @@ public partial class CourseOnlDbContext : DbContext
             entity.Property(e => e.NgayTao).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.TrangThai).HasDefaultValue(true);
 
-            entity.HasOne(d => d.IdNguoiTaoNavigation).WithMany(p => p.KhuyenMais).HasConstraintName("FK_KhuyenMai_NguoiTao");
+            entity.HasOne(d => d.IdNguoiTaoNavigation).WithMany(p => p.KhuyenMais)
+                .HasConstraintName("FK_KhuyenMai_NguoiTao");
         });
 
         modelBuilder.Entity<LichSuChuyenTien>(entity =>
@@ -241,7 +231,7 @@ public partial class CourseOnlDbContext : DbContext
 
         modelBuilder.Entity<NguoiDung>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__NguoiDun__3214EC079DBBDB92");
+            entity.HasKey(e => e.Id).HasName("PK__NguoiDung__3214EC079DBBDB92");
 
             entity.Property(e => e.NgayCapNhat).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.NgayTao).HasDefaultValueSql("(getdate())");
@@ -250,7 +240,7 @@ public partial class CourseOnlDbContext : DbContext
 
         modelBuilder.Entity<NguoiDungVaiTro>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__NguoiDun__3214EC070948A5FB");
+            entity.HasKey(e => e.Id).HasName("PK__NguoiDung__3214EC070948A5FB");
 
             entity.HasOne(d => d.IdNguoiDungNavigation).WithMany(p => p.NguoiDungVaiTros)
                 .OnDelete(DeleteBehavior.Cascade)
@@ -280,7 +270,8 @@ public partial class CourseOnlDbContext : DbContext
             entity.Property(e => e.NgayTao).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.ThuTu).HasDefaultValue(0);
 
-            entity.HasOne(d => d.IdBaiGiangNavigation).WithMany(p => p.TaiLieuBaiGiangs).HasConstraintName("FK_TaiLieuBaiGiang_BaiGiang");
+            entity.HasOne(d => d.IdBaiGiangNavigation).WithMany(p => p.TaiLieuBaiGiangs)
+                .HasConstraintName("FK_TaiLieuBaiGiang_BaiGiang");
         });
 
         modelBuilder.Entity<TienDoHocTap>(entity =>
@@ -290,7 +281,8 @@ public partial class CourseOnlDbContext : DbContext
             entity.Property(e => e.PhanTramHoanThanh).HasDefaultValue(0.0m);
             entity.Property(e => e.SoBaiHocDaHoanThanh).HasDefaultValue(0);
 
-            entity.HasOne(d => d.IdDangKyKhoaHocNavigation).WithOne(p => p.TienDoHocTap).HasConstraintName("FK_TienDoHocTap_DangKyKhoaHoc");
+            entity.HasOne(d => d.IdDangKyKhoaHocNavigation).WithOne(p => p.TienDoHocTap)
+                .HasConstraintName("FK_TienDoHocTap_DangKyKhoaHoc");
 
             entity.HasOne(d => d.IdHocVienNavigation).WithMany(p => p.TienDoHocTaps)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -311,7 +303,8 @@ public partial class CourseOnlDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_TienDoHocTapChiTiet_BaiGiang");
 
-            entity.HasOne(d => d.IdTienDoHocTapNavigation).WithMany(p => p.TienDoHocTapChiTiets).HasConstraintName("FK_TienDoHocTapChiTiet_TienDoHocTap");
+            entity.HasOne(d => d.IdTienDoHocTapNavigation).WithMany(p => p.TienDoHocTapChiTiets)
+                .HasConstraintName("FK_TienDoHocTapChiTiet_TienDoHocTap");
         });
 
         modelBuilder.Entity<VaiTro>(entity =>

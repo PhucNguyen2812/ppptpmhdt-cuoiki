@@ -12,19 +12,22 @@ public partial class BaiGiang
     [Key]
     public int Id { get; set; }
 
-    public int IdChuong { get; set; }
+    public int? IdChuong { get; set; }
 
-    [StringLength(200)]
-    public string TieuDe { get; set; } = null!;
+    [StringLength(255)]
+    public string? TieuDe { get; set; }
 
+    [StringLength(500)]
     public string? MoTa { get; set; }
 
     [StringLength(500)]
-    public string? DuongDanVideo { get; set; }
+    public string? VideoUrl { get; set; }  // ✅ FIXED: Đổi từ DuongDanVideo
 
-    public int ThuTu { get; set; }
+    public int? ThoiLuong { get; set; }  // ✅ ADDED: Property mới
 
-    public bool? MienPhiXem { get; set; }
+    public int? ThuTu { get; set; }
+
+    public bool? XemThuMienPhi { get; set; }  // ✅ FIXED: Đổi từ MienPhiXem
 
     public bool? TrangThai { get; set; }
 
@@ -36,7 +39,7 @@ public partial class BaiGiang
 
     [ForeignKey("IdChuong")]
     [InverseProperty("BaiGiangs")]
-    public virtual Chuong IdChuongNavigation { get; set; } = null!;
+    public virtual Chuong? IdChuongNavigation { get; set; }
 
     [InverseProperty("IdBaiGiangNavigation")]
     public virtual ICollection<TaiLieuBaiGiang> TaiLieuBaiGiangs { get; set; } = new List<TaiLieuBaiGiang>();
