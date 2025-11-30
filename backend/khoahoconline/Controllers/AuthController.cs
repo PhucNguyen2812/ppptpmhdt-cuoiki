@@ -21,6 +21,40 @@ namespace khoahoconline.Controllers
             _configuration = configuration;
         }
 
+        /// <summary>
+        /// [PUBLIC] Đăng ký tài khoản mới
+        /// </summary>
+        /// <param name="registerRequest">Thông tin đăng ký</param>
+        /// <returns>Access token và thông tin người dùng</returns>
+        [HttpPost("register")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Register([FromBody] RegisterRequest registerRequest)
+        {
+            _logger.LogInformation("Controller register called");
+            var result = await _authService.RegisterAsync(registerRequest);
+
+            // Gửi refresh token trong httpOnly cookie
+            Response.Cookies.Append("refreshToken", result.RefreshToken, new CookieOptions
+            {
+                HttpOnly = true, // JS can't access
+                Secure = true,
+                SameSite = SameSiteMode.None,
+                Expires = DateTimeOffset.Now.AddDays(double.Parse(_configuration["Jwt:RefreshTokenExpirationDays"]!))
+            });
+
+            var response = new LoginResponse
+            {
+                AccessToken = result.AccessToken,
+                NguoiDungDto = result.NguoiDungDto
+            };
+            return Ok(ApiResponse<LoginResponse>.SuccessResponse(response, "Đăng ký thành công!"));
+        }
+
+        /// <summary>
+        /// [PUBLIC] Đăng nhập
+        /// </summary>
+        /// <param name="loginRequest">Thông tin đăng nhập</param>
+        /// <returns>Access token và thông tin người dùng</returns>
         [HttpPost("login")]
         [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)

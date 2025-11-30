@@ -1,4 +1,4 @@
-import { getAccessToken, getUserFromToken, removeAccessToken } from "../utils/token.js";
+import AuthHelper from "../utils/authHelper.js";
 import { getAllCategories } from "../api/categoryApi.js";
 import { 
   getFeaturedCourses, 
@@ -13,7 +13,7 @@ import {
   getCourseUrl,
   getCategoryCoursesUrl,
   getSearchUrl
-} from ".../utils/courseHelper.js";
+} from "../utils/courseHelper.js";
 import { DEFAULT_IMAGES } from "../config.js";
 
 // ===== DOM Elements =====
@@ -46,54 +46,126 @@ const elements = {
 };
 
 // ===== Initialize =====
-document.addEventListener('DOMContentLoaded', () => {
-  initializeAuth();
+document.addEventListener('DOMContentLoaded', async () => {
+  await initializeAuth();
+  setupEventListeners();
   loadCategories();
   loadFeaturedCourses();
   loadBestSellingCourses();
   loadNewestCourses();
-  setupEventListeners();
 });
 
 // ===== Auth Initialization =====
-function initializeAuth() {
-  const token = getAccessToken();
-  
-  if (token) {
-    const user = getUserFromToken();
-    if (user) {
-      showUserMenu(user);
-      
-      // Check if user is instructor
-      const role = user.role;
-      if (role && (role === 'INSTRUCTOR' || role.toUpperCase() === 'INSTRUCTOR')) {
-        elements.instructorBtn.style.display = 'block';
-        elements.teachBtn.style.display = 'none';
+async function initializeAuth() {
+  try {
+    if (AuthHelper.isLoggedIn()) {
+      const userInfo = await AuthHelper.getUserInfo();
+      if (userInfo) {
+        showUserMenu(userInfo);
+        
+        // Check if user is instructor and update buttons accordingly
+        const isInstructor = await AuthHelper.isInstructor();
+        updateInstructorButtons(isInstructor);
+      } else {
+        // Failed to get user info, show auth buttons
+        showAuthButtons();
+        updateInstructorButtons(false);
       }
     } else {
+      // Not logged in, show auth buttons
       showAuthButtons();
+      updateInstructorButtons(false);
     }
-  } else {
+  } catch (error) {
+    console.error('Error initializing auth:', error);
+    // On error, show auth buttons as fallback
     showAuthButtons();
+    updateInstructorButtons(false);
   }
 }
 
-function showUserMenu(user) {
-  elements.userMenu.style.display = 'block';
-  elements.authButtons.style.display = 'none';
+// Helper function to update instructor/teach buttons visibility
+function updateInstructorButtons(isInstructor) {
+  if (elements.instructorBtn && elements.teachBtn) {
+    if (isInstructor) {
+      // User has GIANGVIEN role (có thể có cả HOCVIEN và GIANGVIEN): 
+      // show instructor button, hide teach button
+      elements.instructorBtn.style.display = 'block';
+      elements.teachBtn.style.display = 'none';
+    } else {
+      // User only has HOCVIEN role (chỉ có role HOCVIEN): 
+      // hide instructor button, show teach button
+      elements.instructorBtn.style.display = 'none';
+      elements.teachBtn.style.display = 'block';
+    }
+  }
+}
+
+function showUserMenu(userInfo) {
+  // Hide auth buttons first
+  if (elements.authButtons) {
+    elements.authButtons.style.display = 'none';
+  }
   
-  // Set user info
-  elements.userName.textContent = user.name || user.email;
-  elements.userEmail.textContent = user.email;
+  // Show user menu
+  if (elements.userMenu) {
+    elements.userMenu.style.display = 'block';
+  }
   
-  // Set avatar (placeholder for now)
-  elements.userAvatar.src = DEFAULT_IMAGES.AVATAR;
-  document.getElementById('dropdownAvatar').src = DEFAULT_IMAGES.AVATAR;
+  if (userInfo) {
+    // Set user info
+    if (elements.userName) {
+      elements.userName.textContent = userInfo.hoTen || userInfo.email || 'Người dùng';
+    }
+    if (elements.userEmail) {
+      elements.userEmail.textContent = userInfo.email || '';
+    }
+    
+    // Set avatar
+    const avatarUrl = userInfo.anhDaiDien || DEFAULT_IMAGES.AVATAR;
+    if (elements.userAvatar) {
+      elements.userAvatar.src = avatarUrl;
+      elements.userAvatar.onerror = function() {
+        this.src = DEFAULT_IMAGES.AVATAR;
+      };
+    }
+    const dropdownAvatar = document.getElementById('dropdownAvatar');
+    if (dropdownAvatar) {
+      dropdownAvatar.src = avatarUrl;
+      dropdownAvatar.onerror = function() {
+        this.src = DEFAULT_IMAGES.AVATAR;
+      };
+    }
+  }
+}
+
+function hideUserMenu() {
+  if (elements.userMenu) {
+    elements.userMenu.style.display = 'none';
+  }
 }
 
 function showAuthButtons() {
-  elements.userMenu.style.display = 'none';
-  elements.authButtons.style.display = 'flex';
+  // Hide user menu first
+  if (elements.userMenu) {
+    elements.userMenu.style.display = 'none';
+  }
+  
+  // Hide dropdown if it's open
+  if (elements.dropdownMenu) {
+    elements.dropdownMenu.classList.remove('show');
+  }
+  
+  // Show auth buttons
+  if (elements.authButtons) {
+    elements.authButtons.style.display = 'flex';
+  }
+}
+
+function hideAuthButtons() {
+  if (elements.authButtons) {
+    elements.authButtons.style.display = 'none';
+  }
 }
 
 // ===== Event Listeners =====
@@ -113,8 +185,10 @@ function setupEventListeners() {
   
   // Close dropdown when clicking outside
   document.addEventListener('click', (e) => {
-    if (!elements.userMenu?.contains(e.target)) {
-      elements.dropdownMenu?.classList.remove('show');
+    if (elements.userMenu && elements.dropdownMenu) {
+      if (!elements.userMenu.contains(e.target) && !elements.dropdownMenu.contains(e.target)) {
+        elements.dropdownMenu.classList.remove('show');
+      }
     }
   });
   
@@ -124,29 +198,54 @@ function setupEventListeners() {
     handleLogout();
   });
   
-  // Login button
+  // Login button - only navigate if button is visible and user is not logged in
   elements.loginBtn?.addEventListener('click', () => {
-    window.location.href = '/pages/login.html';
+    // Only navigate if user is not logged in
+    const authButtonsVisible = elements.authButtons && 
+      window.getComputedStyle(elements.authButtons).display !== 'none';
+    
+    if (authButtonsVisible && !AuthHelper.isLoggedIn()) {
+      window.location.href = 'login.html';
+    }
   });
   
-  // Signup button  
+  // Signup button - only navigate if button is visible and user is not logged in
   elements.signupBtn?.addEventListener('click', () => {
-    window.location.href = '/pages/register.html';
+    // Only navigate if user is not logged in
+    const authButtonsVisible = elements.authButtons && 
+      window.getComputedStyle(elements.authButtons).display !== 'none';
+    
+    if (authButtonsVisible && !AuthHelper.isLoggedIn()) {
+      window.location.href = 'register.html';
+    }
   });
   
   // Teach button
   elements.teachBtn?.addEventListener('click', () => {
-    if (getAccessToken()) {
-      window.location.href = '/pages/become-instructor.html';
+    if (AuthHelper.isLoggedIn()) {
+      window.location.href = 'become-instructor.html';
     } else {
-      window.location.href = '/pages/login.html?redirect=become-instructor';
+      window.location.href = 'login.html?redirect=become-instructor';
     }
   });
   
   // Instructor button
   elements.instructorBtn?.addEventListener('click', () => {
-    window.location.href = '/pages/instructor-dashboard.html';
+    window.location.href = 'instructor-dashboard.html';
   });
+  
+  // Cart link
+  const cartLink = document.getElementById('cartLink');
+  if (cartLink) {
+    cartLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (AuthHelper.isLoggedIn()) {
+        window.location.href = 'my-cart.html';
+      } else {
+        window.location.href = 'login.html?redirect=my-cart';
+      }
+    });
+  }
 }
 
 // ===== Search =====
@@ -158,10 +257,9 @@ function handleSearch() {
 }
 
 // ===== Logout =====
-function handleLogout() {
+async function handleLogout() {
   if (confirm('Bạn có chắc muốn đăng xuất?')) {
-    removeAccessToken();
-    window.location.href = '/pages/index.html';
+    await AuthHelper.logout();
   }
 }
 
@@ -170,14 +268,33 @@ async function loadCategories() {
   try {
     const response = await getAllCategories();
     
-    if (response.success && response.data) {
-      renderCategoryNav(response.data);
-      renderCategoriesGrid(response.data);
+    // Handle different response formats
+    let categories = [];
+    if (response.success) {
+      if (Array.isArray(response.data)) {
+        categories = response.data;
+      } else if (response.data && Array.isArray(response.data.items)) {
+        categories = response.data.items;
+      } else if (Array.isArray(response)) {
+        categories = response;
+      }
+    } else if (Array.isArray(response)) {
+      categories = response;
+    }
+    
+    if (categories.length > 0) {
+      renderCategoryNav(categories);
+      renderCategoriesGrid(categories);
+    } else {
+      console.warn('No categories found');
+      if (elements.categoryNav) {
+        elements.categoryNav.innerHTML = '<p style="color: #999; padding: 12px 0;">Không có danh mục nào</p>';
+      }
     }
   } catch (error) {
     console.error('Error loading categories:', error);
     if (elements.categoryNav) {
-      elements.categoryNav.innerHTML = '<p style="color: #999;">Không thể tải danh mục</p>';
+      elements.categoryNav.innerHTML = '<p style="color: #999; padding: 12px 0;">Không thể tải danh mục</p>';
     }
   }
 }
@@ -185,9 +302,17 @@ async function loadCategories() {
 function renderCategoryNav(categories) {
   if (!elements.categoryNav) return;
   
-  const html = categories.slice(0, 10).map(cat => `
-    <a href="${getCategoryCoursesUrl(cat.id)}">${cat.tenDanhMuc}</a>
-  `).join('');
+  if (!categories || categories.length === 0) {
+    elements.categoryNav.innerHTML = '<p style="color: #999; padding: 12px 0;">Không có danh mục</p>';
+    return;
+  }
+  
+  // Show up to 12 categories in navigation
+  const html = categories.slice(0, 12).map(cat => {
+    const categoryName = cat.tenDanhMuc || cat.name || 'Danh mục';
+    const categoryId = cat.id;
+    return `<a href="${getCategoryCoursesUrl(categoryId)}">${categoryName}</a>`;
+  }).join('');
   
   elements.categoryNav.innerHTML = html;
 }

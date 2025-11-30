@@ -4,6 +4,7 @@ using khoahoconline.Data.Entities;
 using khoahoconline.Data.Repositories;
 using khoahoconline.Dtos.Auth;
 using khoahoconline.Dtos.NguoiDung;
+using khoahoconline.Helpers;
 using khoahoconline.Middleware.Exceptions;
 using System.Globalization;
 
@@ -26,6 +27,90 @@ namespace khoahoconline.Services.Impl
             _configuration = configuration;
         }
 
+        public async Task<LoginResponse> RegisterAsync(RegisterRequest request)
+        {
+            _logger.LogInformation($"Registering new user with email: {request.Email}");
+
+            // Kiểm tra email đã tồn tại chưa
+            var existingUser = await _unitOfWork.NguoiDungRepository.GetByEmailAsync(request.Email);
+            if (existingUser != null)
+            {
+                throw new BadRequestException("Email này đã được sử dụng. Vui lòng sử dụng email khác.");
+            }
+
+            // Lấy role HOCVIEN (học viên)
+            var userRole = await _unitOfWork.VaiTroRepository.GetByTenVaiTroAsync("HOCVIEN");
+            if (userRole == null)
+            {
+                throw new NotFoundException("Không tìm thấy vai trò HOCVIEN trong hệ thống.");
+            }
+
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                // Tạo người dùng mới
+                var nguoiDung = new NguoiDung
+                {
+                    HoTen = request.HoTen,
+                    Email = request.Email,
+                    MatKhau = PasswordHelper.HashPassword(request.MatKhau),
+                    SoDienThoai = request.SoDienThoai,
+                    TrangThai = true,
+                    NgayTao = DateTime.Now,
+                    NgayCapNhat = DateTime.Now
+                };
+
+                await _unitOfWork.NguoiDungRepository.CreateAsync(nguoiDung);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Gán role USER cho người dùng
+                await _unitOfWork.NguoiDungRepository.AddRoleToUserAsync(nguoiDung.Id, userRole.Id);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Tạo refresh token
+                var accessToken = _tokenService.GenerateAccessToken(nguoiDung);
+                var refreshToken = _tokenService.GenerateRefreshToken();
+
+                var refreshTokenEntity = new RefreshToken
+                {
+                    Token = refreshToken,
+                    IdNguoiDung = nguoiDung.Id,
+                    NgayTao = DateTime.Now,
+                    NgayHetHan = DateTime.Now.AddDays(double.Parse(_configuration["Jwt:RefreshTokenExpirationDays"]!))
+                };
+
+                await _unitOfWork.RefreshTokenRepository.CreateAsync(refreshTokenEntity);
+                await _unitOfWork.SaveChangesAsync();
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                _logger.LogInformation($"User registered successfully with ID: {nguoiDung.Id}");
+
+                // Load lại user với roles để tạo token đúng
+                var nguoiDungWithRoles = await _unitOfWork.NguoiDungRepository.GetByIdWithRolesAsync(nguoiDung.Id);
+                if (nguoiDungWithRoles == null)
+                {
+                    throw new NotFoundException("Không tìm thấy người dùng sau khi đăng ký.");
+                }
+
+                // Tạo lại token với roles đầy đủ
+                accessToken = _tokenService.GenerateAccessToken(nguoiDungWithRoles);
+                var nguoiDungDto = _mapper.Map<NguoiDungDto>(nguoiDungWithRoles);
+
+                return new LoginResponse
+                {
+                    AccessToken = accessToken,
+                    RefreshToken = refreshToken,
+                    NguoiDungDto = nguoiDungDto
+                };
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Error registering new user");
+                throw;
+            }
+        }
 
         public async Task<LoginResponse> LoginAsync(LoginRequest request)
         {

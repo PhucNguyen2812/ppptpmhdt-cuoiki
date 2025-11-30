@@ -9,7 +9,11 @@ export async function apiFetch(url, options = {}) {
     ...(token && { Authorization: `Bearer ${token}` }),
   };
 
-  let response = await fetch(`${API_BASE_URL}${url}`, {
+  // Ensure URL is properly formatted
+  const fullUrl = `${API_BASE_URL}${url}`;
+  console.log('API Fetch URL:', fullUrl);
+  
+  let response = await fetch(fullUrl, {
     ...options,
     headers,
     credentials: "include", // include cookies
@@ -27,7 +31,13 @@ export async function apiFetch(url, options = {}) {
       });
     } else {
       removeAccessToken();
-      window.location.href = "/pages/login.html";
+      // Determine correct path based on current location
+      const currentPath = window.location.pathname;
+      if (currentPath.includes('/pages/') || currentPath.includes('/admin/')) {
+        window.location.href = "login.html";
+      } else {
+        window.location.href = "pages/login.html";
+      }
     }
   }
 

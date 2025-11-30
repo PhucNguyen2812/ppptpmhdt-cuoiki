@@ -36,6 +36,12 @@ public partial class CourseOnlDbContext : DbContext
     public virtual DbSet<TienDoHocTap> TienDoHocTaps { get; set; }
     public virtual DbSet<TienDoHocTapChiTiet> TienDoHocTapChiTiets { get; set; }
     public virtual DbSet<VaiTro> VaiTros { get; set; }
+    public virtual DbSet<Voucher> Vouchers { get; set; }
+    public virtual DbSet<ChiTietDonHang> ChiTietDonHangs { get; set; }
+    public virtual DbSet<TaiLieuKhoaHoc> TaiLieuKhoaHocs { get; set; }
+    public virtual DbSet<ChiaSeLuanNhuan> ChiaSeLuanNhuans { get; set; }
+    public virtual DbSet<KhoaHocPhienBan> KhoaHocPhienBans { get; set; }
+    public virtual DbSet<KiemDuyetKhoaHoc> KiemDuyetKhoaHocs { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code.
@@ -47,8 +53,8 @@ public partial class CourseOnlDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("PK__BaiGiang__3214EC071FEAD29F");
 
-            // ✅ FIXED: Đổi từ MienPhiXem → XemThuMienPhi
-            entity.Property(e => e.XemThuMienPhi).HasDefaultValue(false);
+            // ✅ FIXED: Map MienPhiXem từ SQL
+            entity.Property(e => e.MienPhiXem).HasDefaultValue(false);
             entity.Property(e => e.NgayCapNhat).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.NgayTao).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.TrangThai).HasDefaultValue(true);
@@ -255,7 +261,6 @@ public partial class CourseOnlDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("PK__RefreshT__3214EC076EAAAC0F");
 
-            entity.Property(e => e.DaHuy).HasDefaultValue(false);
             entity.Property(e => e.NgayTao).HasDefaultValueSql("(getdate())");
 
             entity.HasOne(d => d.IdNguoiDungNavigation).WithMany(p => p.RefreshTokens)

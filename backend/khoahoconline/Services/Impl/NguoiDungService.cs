@@ -25,7 +25,7 @@ namespace khoahoconline.Services.Impl
         {
             _logger.LogInformation("Create new user");
             var entity = _mapper.Map<NguoiDung>(dto);
-            var role = await _unitOfWork.VaiTroRepository.GetByTenVaiTroAsync("USER");
+            var role = await _unitOfWork.VaiTroRepository.GetByTenVaiTroAsync("HOCVIEN");
 
             entity.NgayTao = DateTime.Now;
             entity.TrangThai = true;
@@ -105,7 +105,24 @@ namespace khoahoconline.Services.Impl
             {
                 throw new NotFoundException($"Không tìm thấy người dùng với id: {id}");
             }
+            
+            // Store current password before mapping
+            var currentPassword = nguoiDung.MatKhau;
+            
             _mapper.Map(dto, nguoiDung);
+            
+            // Only update password if a new one is provided (not empty)
+            if (string.IsNullOrWhiteSpace(dto.MatKhau))
+            {
+                // Keep the current password if no new password is provided
+                nguoiDung.MatKhau = currentPassword;
+            }
+            else
+            {
+                // Hash the new password
+                nguoiDung.MatKhau = PasswordHelper.HashPassword(dto.MatKhau);
+            }
+            
             nguoiDung.NgayCapNhat = DateTime.Now;
             await _unitOfWork.NguoiDungRepository.UpdateAsync(nguoiDung);
             await _unitOfWork.SaveChangesAsync();
@@ -157,15 +174,15 @@ namespace khoahoconline.Services.Impl
                 throw new BadRequestException("Tài khoản đã bị vô hiệu hóa.");
             }
 
-            // Kiểm tra xem đã có role INSTRUCTOR chưa
-            var hasInstructorRole = await _unitOfWork.NguoiDungRepository.HasRoleAsync(userId, "INSTRUCTOR");
+            // Kiểm tra xem đã có role GIANGVIEN chưa
+            var hasInstructorRole = await _unitOfWork.NguoiDungRepository.HasRoleAsync(userId, "GIANGVIEN");
             if (hasInstructorRole)
             {
                 throw new BadRequestException("Người dùng đã là giảng viên.");
             }
 
-            // Lấy role INSTRUCTOR
-            var instructorRole = await _unitOfWork.VaiTroRepository.GetByTenVaiTroAsync("INSTRUCTOR");
+            // Lấy role GIANGVIEN
+            var instructorRole = await _unitOfWork.VaiTroRepository.GetByTenVaiTroAsync("GIANGVIEN");
             if (instructorRole == null)
             {
                 throw new NotFoundException("Không tìm thấy vai trò giảng viên trong hệ thống.");

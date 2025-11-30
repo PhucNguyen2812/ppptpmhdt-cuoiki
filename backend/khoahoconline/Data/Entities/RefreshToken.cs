@@ -27,8 +27,6 @@ public partial class RefreshToken
     [Column(TypeName = "datetime")]
     public DateTime? NgayThuHoi { get; set; }
 
-    public bool? DaHuy { get; set; }
-
     [ForeignKey("IdNguoiDung")]
     [InverseProperty("RefreshTokens")]
     public virtual NguoiDung? IdNguoiDungNavigation { get; set; }

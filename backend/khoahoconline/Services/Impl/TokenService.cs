@@ -2,6 +2,7 @@
 using khoahoconline.Data.Entities;
 using khoahoconline.Data.Repositories;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -30,18 +31,32 @@ namespace khoahoconline.Services.Impl
             _logger.LogInformation($" id = {nguoiDung.Id.ToString()}");
             _logger.LogInformation($"ten dang nhap: {nguoiDung.Email}");
 
-            // Get role from NguoiDungVaiTros relationship
-            var vaiTroNavigation = nguoiDung.NguoiDungVaiTros?.FirstOrDefault()?.IdVaiTroNavigation;
-            var tenVaiTro = vaiTroNavigation?.TenVaiTro ?? "USER";
+            // Get ALL roles from NguoiDungVaiTros relationship
+            var roles = nguoiDung.NguoiDungVaiTros?
+                .Where(ndvt => ndvt.IdVaiTroNavigation != null)
+                .Select(ndvt => ndvt.IdVaiTroNavigation!.TenVaiTro)
+                .ToList() ?? new List<string>();
 
-            _logger.LogInformation($"ten vai tro: {tenVaiTro}");
+            // If no roles found, default to HOCVIEN
+            if (roles.Count == 0)
+            {
+                roles.Add("HOCVIEN");
+            }
 
-            var claims = new[]
+            _logger.LogInformation($"ten vai tro: {string.Join(", ", roles)}");
+
+            // Build claims list with all roles
+            var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, nguoiDung.Id.ToString()),
-                new Claim(ClaimTypes.Name, nguoiDung.Email!),
-                new Claim(ClaimTypes.Role, tenVaiTro)
+                new Claim(ClaimTypes.Name, nguoiDung.Email!)
             };
+
+            // Add all roles as separate Role claims (ASP.NET Core supports multiple role claims)
+            foreach (var role in roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
 
             var token = new JwtSecurityToken(
                 issuer: jwtSettings["Issuer"],

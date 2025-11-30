@@ -1,5 +1,5 @@
 // API Configuration
-export const API_BASE_URL = "https://localhost:7043/api/";
+export const API_BASE_URL = "http://localhost:5228/api/";
 
 // API Endpoints
 export const API_ENDPOINTS = {
@@ -20,15 +20,30 @@ export const API_ENDPOINTS = {
     COURSE_DETAIL: "v1/courses",
     COURSE_CURRICULUM: "v1/courses",
     COURSES_BY_INSTRUCTOR: "v1/courses/instructor",
+    COURSES_PENDING: "v1/courses/pending",
+    COURSES_APPROVALS: "v1/courses/approvals",
     
     // User
     NGUOIDUNGS: "v1/nguoidungs",
     PROFILE: "v1/nguoidungs/profile",
     
-    // Cart (placeholder for future)
+    // Cart
     CART: "v1/cart",
-    CART_COUNT: "v1/cart/count"
+    CART_COUNT: "v1/cart/count",
+    
+    // Payment
+    CREATE_ORDER: "v1/payments/orders",
+    CREATE_PAYMENT_INTENT: "v1/payments/create-intent",
+    CONFIRM_PAYMENT: "v1/payments/confirm-payment",
+    GET_ORDER: "v1/payments/orders",
+    GET_USER_ORDERS: "v1/payments/orders",
+    
+    // Voucher
+    VALIDATE_VOUCHER: "v1/vouchers/validate"
 };
+
+// Stripe Configuration
+export const STRIPE_PUBLISHABLE_KEY = "pk_test_51SWAWdFIOtxHv57DnTtGxaYrckpGLim6zcQ3VvJRw6yye7LN4hQOfur59DTrFX9CzBUXx7PRTPmQ7Kb9P9yUOcOX00MN5WxRUo";
 
 // Default Images
 export const DEFAULT_IMAGES = {

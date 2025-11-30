@@ -89,3 +89,35 @@ export async function deleteUser(id) {
     throw new Error(error.message || 'Failed to delete user');
   }
 }
+
+/**
+ * Register as instructor
+ * @returns {Promise<Object>} Success response
+ */
+export async function registerAsInstructor() {
+  const response = await apiFetch('v1/nguoidungs/register-instructor', {
+    method: 'POST'
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to register as instructor');
+  }
+  
+  return await response.json();
+}
+
+/**
+ * Get user profile
+ * @returns {Promise<Object>} User profile data
+ */
+export async function getProfile() {
+  const response = await apiFetch('v1/nguoidungs/profile');
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch profile');
+  }
+  
+  return await response.json();
+}

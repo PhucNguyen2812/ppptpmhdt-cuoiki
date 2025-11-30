@@ -35,8 +35,6 @@ export function getUserFromToken() {
     // Decode base64 payload
     const payload = JSON.parse(atob(parts[1]));
     
-    console.log('JWT Payload:', payload); // Debug log
-    
     // Extract claims - chuẩn JWT claims
     const emailClaim = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress';
     const nameIdentifierClaim = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier';
@@ -73,12 +71,6 @@ export function isTokenExpired() {
   
   const exp = user.exp * 1000; // Convert to milliseconds
   const now = Date.now();
-  
-  console.log('Token expiry check:', {
-    expiresAt: new Date(exp),
-    now: new Date(now),
-    isExpired: now >= exp
-  });
   
   return now >= exp;
 }

@@ -55,6 +55,15 @@ public partial class KhoaHoc
     [Column(TypeName = "datetime")]
     public DateTime? NgayCapNhat { get; set; }
 
+    public int PhienBanHienTai { get; set; }
+
+    public bool IsDeleted { get; set; }
+
+    [StringLength(200)]
+    public string? VideoGioiThieuPublicId { get; set; }
+
+    public int? VideoGioiThieuDuration { get; set; }
+
     // ===== NAVIGATION PROPERTIES =====
 
     [ForeignKey("IdDanhMuc")]
@@ -73,6 +82,9 @@ public partial class KhoaHoc
     public virtual ICollection<ChiTietGioHang> ChiTietGioHangs { get; set; } = new List<ChiTietGioHang>();
 
     [InverseProperty("IdKhoaHocNavigation")]
+    public virtual ICollection<ChiTietDonHang> ChiTietDonHangs { get; set; } = new List<ChiTietDonHang>();
+
+    [InverseProperty("IdKhoaHocNavigation")]
     public virtual ICollection<Chuong> Chuongs { get; set; } = new List<Chuong>();
 
     [InverseProperty("IdKhoaHocNavigation")]
@@ -87,4 +99,10 @@ public partial class KhoaHoc
     // ✅ THÊM: Navigation property cho TienDoHocTap
     [InverseProperty("IdKhoaHocNavigation")]
     public virtual ICollection<TienDoHocTap> TienDoHocTaps { get; set; } = new List<TienDoHocTap>();
+
+    [InverseProperty("IdKhoaHocNavigation")]
+    public virtual ICollection<KhoaHocPhienBan> KhoaHocPhienBans { get; set; } = new List<KhoaHocPhienBan>();
+
+    [InverseProperty("IdKhoaHocNavigation")]
+    public virtual ICollection<KiemDuyetKhoaHoc> KiemDuyetKhoaHocs { get; set; } = new List<KiemDuyetKhoaHoc>();
 }

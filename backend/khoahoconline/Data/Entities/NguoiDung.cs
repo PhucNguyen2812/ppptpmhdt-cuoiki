@@ -44,6 +44,9 @@ public partial class NguoiDung
     [Column(TypeName = "datetime")]
     public DateTime? NgayCapNhat { get; set; }
 
+    [Column(TypeName = "datetime")]
+    public DateTime? LanDangNhapCuoi { get; set; }
+
     [InverseProperty("IdGiangVienNavigation")]
     public virtual ICollection<ChiTietChiaSeDoanhThu> ChiTietChiaSeDoanhThus { get; set; } = new List<ChiTietChiaSeDoanhThu>();
 
@@ -76,4 +79,10 @@ public partial class NguoiDung
 
     [InverseProperty("IdHocVienNavigation")]
     public virtual ICollection<TienDoHocTap> TienDoHocTaps { get; set; } = new List<TienDoHocTap>();
+
+    [InverseProperty("IdNguoiGuiNavigation")]
+    public virtual ICollection<KiemDuyetKhoaHoc> KiemDuyetKhoaHocGui { get; set; } = new List<KiemDuyetKhoaHoc>();
+
+    [InverseProperty("IdNguoiKiemDuyetNavigation")]
+    public virtual ICollection<KiemDuyetKhoaHoc> KiemDuyetKhoaHocKiemDuyet { get; set; } = new List<KiemDuyetKhoaHoc>();
 }

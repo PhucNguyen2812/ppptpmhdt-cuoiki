@@ -15,6 +15,20 @@ public partial class GioHang
 
     public int IdNguoiDung { get; set; }
 
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal? TongTienGoc { get; set; }
+
+    [Column(TypeName = "decimal(5, 2)")]
+    public decimal? PhanTramGiam { get; set; }
+
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal? TienGiamVoucher { get; set; }
+
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal? TongTienThanhToan { get; set; }
+
+    public int? SoLuongKhoaHoc { get; set; }
+
     [Column(TypeName = "datetime")]
     public DateTime? NgayTao { get; set; }
 

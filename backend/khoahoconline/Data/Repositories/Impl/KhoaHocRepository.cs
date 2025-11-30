@@ -13,11 +13,26 @@ namespace khoahoconline.Data.Repositories.Impl
 
         public async Task<PagedResult<KhoaHoc>> GetPagedAsync(KhoaHocFilterDto filter)
         {
+            // Lấy danh sách ID khóa học đã được duyệt (lấy phiên bản mới nhất của mỗi khóa học)
+            var allApprovals = await _context.KiemDuyetKhoaHocs
+                .AsNoTracking()
+                .ToListAsync();
+
+            var approvedCourseIds = allApprovals
+                .GroupBy(kd => kd.IdKhoaHoc)
+                .Where(g => 
+                {
+                    var latest = g.OrderByDescending(kd => kd.PhienBan).ThenByDescending(kd => kd.NgayGui).First();
+                    return latest.TrangThaiKiemDuyet == Helpers.KiemDuyetConstants.DaDuyet;
+                })
+                .Select(g => g.Key)
+                .ToList();
+
             var query = _dbSet
                 .AsNoTracking()
                 .Include(k => k.IdDanhMucNavigation)
                 .Include(k => k.IdGiangVienNavigation)
-                .Where(k => k.TrangThai == true); // Chỉ lấy khóa học active
+                .Where(k => k.TrangThai == true && !k.IsDeleted && approvedCourseIds.Contains(k.Id)); // Chỉ lấy khóa học active, đã duyệt
 
             // Search
             if (!string.IsNullOrWhiteSpace(filter.Search))
@@ -92,11 +107,28 @@ namespace khoahoconline.Data.Repositories.Impl
 
         public async Task<List<KhoaHoc>> GetFeaturedCoursesAsync(int take = 8)
         {
+            // Lấy danh sách ID khóa học đã được duyệt
+            var allApprovals = await _context.KiemDuyetKhoaHocs
+                .AsNoTracking()
+                .ToListAsync();
+
+            var approvedCourseIds = allApprovals
+                .GroupBy(kd => kd.IdKhoaHoc)
+                .Where(g => 
+                {
+                    var latest = g.OrderByDescending(kd => kd.PhienBan).ThenByDescending(kd => kd.NgayGui).First();
+                    return latest.TrangThaiKiemDuyet == Helpers.KiemDuyetConstants.DaDuyet;
+                })
+                .Select(g => g.Key)
+                .ToList();
+
             return await _dbSet
                 .AsNoTracking()
                 .Include(k => k.IdDanhMucNavigation)
                 .Include(k => k.IdGiangVienNavigation)
                 .Where(k => k.TrangThai == true 
+                    && !k.IsDeleted
+                    && approvedCourseIds.Contains(k.Id)
                     && k.DiemDanhGia >= 4.5m 
                     && k.SoLuongHocVien > 0)
                 .OrderByDescending(k => k.DiemDanhGia)
@@ -107,11 +139,26 @@ namespace khoahoconline.Data.Repositories.Impl
 
         public async Task<List<KhoaHoc>> GetBestSellingCoursesAsync(int take = 8)
         {
+            // Lấy danh sách ID khóa học đã được duyệt
+            var allApprovals = await _context.KiemDuyetKhoaHocs
+                .AsNoTracking()
+                .ToListAsync();
+
+            var approvedCourseIds = allApprovals
+                .GroupBy(kd => kd.IdKhoaHoc)
+                .Where(g => 
+                {
+                    var latest = g.OrderByDescending(kd => kd.PhienBan).ThenByDescending(kd => kd.NgayGui).First();
+                    return latest.TrangThaiKiemDuyet == Helpers.KiemDuyetConstants.DaDuyet;
+                })
+                .Select(g => g.Key)
+                .ToList();
+
             return await _dbSet
                 .AsNoTracking()
                 .Include(k => k.IdDanhMucNavigation)
                 .Include(k => k.IdGiangVienNavigation)
-                .Where(k => k.TrangThai == true)
+                .Where(k => k.TrangThai == true && !k.IsDeleted && approvedCourseIds.Contains(k.Id))
                 .OrderByDescending(k => k.SoLuongHocVien)
                 .ThenByDescending(k => k.DiemDanhGia)
                 .Take(take)
@@ -120,11 +167,26 @@ namespace khoahoconline.Data.Repositories.Impl
 
         public async Task<List<KhoaHoc>> GetNewestCoursesAsync(int take = 8)
         {
+            // Lấy danh sách ID khóa học đã được duyệt
+            var allApprovals = await _context.KiemDuyetKhoaHocs
+                .AsNoTracking()
+                .ToListAsync();
+
+            var approvedCourseIds = allApprovals
+                .GroupBy(kd => kd.IdKhoaHoc)
+                .Where(g => 
+                {
+                    var latest = g.OrderByDescending(kd => kd.PhienBan).ThenByDescending(kd => kd.NgayGui).First();
+                    return latest.TrangThaiKiemDuyet == Helpers.KiemDuyetConstants.DaDuyet;
+                })
+                .Select(g => g.Key)
+                .ToList();
+
             return await _dbSet
                 .AsNoTracking()
                 .Include(k => k.IdDanhMucNavigation)
                 .Include(k => k.IdGiangVienNavigation)
-                .Where(k => k.TrangThai == true)
+                .Where(k => k.TrangThai == true && !k.IsDeleted && approvedCourseIds.Contains(k.Id))
                 .OrderByDescending(k => k.NgayTao)
                 .Take(take)
                 .ToListAsync();
@@ -135,7 +197,7 @@ namespace khoahoconline.Data.Repositories.Impl
             var query = _dbSet
                 .AsNoTracking()
                 .Include(k => k.IdDanhMucNavigation)
-                .Where(k => k.IdGiangVien == instructorId && k.TrangThai == true)
+                .Where(k => k.IdGiangVien == instructorId && !k.IsDeleted) // Giảng viên thấy tất cả khóa học của mình (kể cả chưa duyệt)
                 .OrderByDescending(k => k.NgayTao);
 
             var totalCount = await query.CountAsync();

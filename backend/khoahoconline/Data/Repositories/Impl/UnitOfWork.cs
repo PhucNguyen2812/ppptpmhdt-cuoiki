@@ -13,6 +13,8 @@ namespace khoahoconline.Data.Repositories.Impl
         private VaiTroRepository? _vaiTroRepository;
         private DanhMucRepository? _danhMucRepository;
         private KhoaHocRepository? _khoaHocRepository;
+        private GioHangRepository? _gioHangRepository;
+        private KiemDuyetKhoaHocRepository? _kiemDuyetKhoaHocRepository;
 
         public UnitOfWork(CourseOnlDbContext context)
         {
@@ -33,6 +35,12 @@ namespace khoahoconline.Data.Repositories.Impl
 
         public IKhoaHocRepository KhoaHocRepository =>
             _khoaHocRepository ??= new KhoaHocRepository(_context);
+
+        public IGioHangRepository GioHangRepository =>
+            _gioHangRepository ??= new GioHangRepository(_context);
+
+        public IKiemDuyetKhoaHocRepository KiemDuyetKhoaHocRepository =>
+            _kiemDuyetKhoaHocRepository ??= new KiemDuyetKhoaHocRepository(_context);
 
         public async Task BeginTransactionAsync()
         {

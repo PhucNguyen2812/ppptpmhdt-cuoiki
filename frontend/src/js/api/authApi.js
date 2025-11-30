@@ -2,6 +2,31 @@ import { apiFetch } from "../api/baseApi.js";
 import { saveAccessToken, removeAccessToken, getAccessToken } from "../utils/token.js";
 import { API_BASE_URL } from "../config.js";
 
+export async function register(hoTen, email, matKhau, soDienThoai = null) {
+  const res = await fetch(`${API_BASE_URL}v1/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include", // send refreshToken cookie
+    body: JSON.stringify({ 
+      hoTen: hoTen, 
+      email: email, 
+      matKhau: matKhau,
+      soDienThoai: soDienThoai || null
+    }),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || "Đăng ký thất bại");
+  }
+
+  const data = await res.json();
+  if (data.data && data.data.accessToken) {
+    saveAccessToken(data.data.accessToken);
+  }
+  return data;
+}
+
 export async function login(email, matKhau) {
   const res = await fetch(`${API_BASE_URL}v1/auth/login`, {
     method: "POST",
@@ -10,10 +35,17 @@ export async function login(email, matKhau) {
     body: JSON.stringify({ email: email, matKhau: matKhau }),
   });
 
-  if (!res.ok) throw new Error("Đăng nhập thất bại");
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || "Đăng nhập thất bại");
+  }
 
   const data = await res.json();
-  saveAccessToken(data.accessToken);
+  if (data.accessToken) {
+    saveAccessToken(data.accessToken);
+  } else if (data.data && data.data.accessToken) {
+    saveAccessToken(data.data.accessToken);
+  }
   return data;
 }
 
@@ -39,7 +71,7 @@ export async function logout() {
     
     // Force reload and redirect to login
     // Using replace to prevent back button issues
-    window.location.replace("/src/pages/login.html");
+    window.location.replace("login.html");
   }
 }
 
@@ -51,7 +83,7 @@ export function requireAuth() {
   const token = getAccessToken();
   
   if (!token) {
-    window.location.replace("/src/pages/login.html");
+    window.location.replace("login.html");
     return false;
   }
   
@@ -62,13 +94,13 @@ export function requireAuth() {
     
     if (Date.now() >= exp) {
       removeAccessToken();
-      window.location.replace("/src/pages/login.html");
+      window.location.replace("login.html");
       return false;
     }
   } catch (error) {
     console.error("Invalid token:", error);
     removeAccessToken();
-    window.location.replace("/src/pages/login.html");
+    window.location.replace("login.html");
     return false;
   }
   

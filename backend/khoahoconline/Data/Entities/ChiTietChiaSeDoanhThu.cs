@@ -30,6 +30,9 @@ public partial class ChiTietChiaSeDoanhThu
     [StringLength(100)]
     public string? MaGiaoDichChuyenTien { get; set; }
 
+    [StringLength(200)]
+    public string? StripeTransferId { get; set; }
+
     [ForeignKey("IdDonHang")]
     [InverseProperty("ChiTietChiaSeDoanhThus")]
     public virtual DonHang IdDonHangNavigation { get; set; } = null!;

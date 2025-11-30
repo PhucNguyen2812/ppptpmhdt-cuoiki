@@ -14,6 +14,11 @@ public partial class DonHang
 
     public int IdNguoiDung { get; set; }
 
+    public int? IdVoucher { get; set; }
+
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal? TongTienGoc { get; set; }
+
     [Column(TypeName = "decimal(18, 2)")]
     public decimal TongTien { get; set; }
 
@@ -24,6 +29,12 @@ public partial class DonHang
     public decimal TongTienThanhToan { get; set; }
 
     [StringLength(50)]
+    public string? PhuongThucThanhToan { get; set; }
+
+    [StringLength(50)]
+    public string? TrangThaiThanhToan { get; set; }
+
+    [StringLength(50)]
     public string TrangThaiDonHang { get; set; } = null!;
 
     [Column(TypeName = "datetime")]
@@ -32,13 +43,23 @@ public partial class DonHang
     [StringLength(500)]
     public string? GhiChu { get; set; }
 
+    [StringLength(200)]
+    public string? StripePaymentIntentId { get; set; }
+
     [InverseProperty("IdDonHangNavigation")]
     public virtual ICollection<ChiTietChiaSeDoanhThu> ChiTietChiaSeDoanhThus { get; set; } = new List<ChiTietChiaSeDoanhThu>();
 
     [InverseProperty("IdDonHangNavigation")]
     public virtual ICollection<DangKyKhoaHoc> DangKyKhoaHocs { get; set; } = new List<DangKyKhoaHoc>();
 
+    [InverseProperty("IdDonHangNavigation")]
+    public virtual ICollection<ChiTietDonHang> ChiTietDonHangs { get; set; } = new List<ChiTietDonHang>();
+
     [ForeignKey("IdNguoiDung")]
     [InverseProperty("DonHangs")]
     public virtual NguoiDung IdNguoiDungNavigation { get; set; } = null!;
+
+    [ForeignKey("IdVoucher")]
+    [InverseProperty("DonHangs")]
+    public virtual Voucher? IdVoucherNavigation { get; set; }
 }

@@ -29,4 +29,7 @@ public partial class DanhMucKhoaHoc
 
     [InverseProperty("IdDanhMucNavigation")]
     public virtual ICollection<KhoaHoc> KhoaHocs { get; set; } = new List<KhoaHoc>();
+
+    [InverseProperty("IdDanhMucNavigation")]
+    public virtual ICollection<KhoaHocPhienBan> KhoaHocPhienBans { get; set; } = new List<KhoaHocPhienBan>();
 }

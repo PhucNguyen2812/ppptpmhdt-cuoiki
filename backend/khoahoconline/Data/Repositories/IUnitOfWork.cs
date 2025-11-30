@@ -7,6 +7,8 @@
         IVaiTroRepository VaiTroRepository { get; }
         IKhoaHocRepository KhoaHocRepository { get; }
         IDanhMucRepository DanhMucRepository { get; }
+        IGioHangRepository GioHangRepository { get; }
+        IKiemDuyetKhoaHocRepository KiemDuyetKhoaHocRepository { get; }
 
         Task<int> SaveChangesAsync();
         Task BeginTransactionAsync();

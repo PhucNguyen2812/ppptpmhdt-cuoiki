@@ -8,20 +8,30 @@ export function showAlert(message, type) {
   }, 2000);
 }
 
-export function setLoadingState(isLoading) {
-  const loginButton = document.getElementById("loginButton");
+export function setLoadingState(isLoading, buttonId = "loginButton") {
+  const button = document.getElementById(buttonId);
   const emailInput = document.getElementById("email");
   const passwordInput = document.getElementById("matKhau");
+  const hoTenInput = document.getElementById("hoTen");
+  const soDienThoaiInput = document.getElementById("soDienThoai");
 
   if (isLoading) {
-    loginButton.classList.add("login__button--loading");
-    loginButton.disabled = true;
-    emailInput.disabled = true;
-    passwordInput.disabled = true;
+    if (button) {
+      button.classList.add("login__button--loading");
+      button.disabled = true;
+    }
+    if (emailInput) emailInput.disabled = true;
+    if (passwordInput) passwordInput.disabled = true;
+    if (hoTenInput) hoTenInput.disabled = true;
+    if (soDienThoaiInput) soDienThoaiInput.disabled = true;
   } else {
-    loginButton.classList.remove("login__button--loading");
-    loginButton.disabled = false;
-    emailInput.disabled = false;
-    passwordInput.disabled = false;
+    if (button) {
+      button.classList.remove("login__button--loading");
+      button.disabled = false;
+    }
+    if (emailInput) emailInput.disabled = false;
+    if (passwordInput) passwordInput.disabled = false;
+    if (hoTenInput) hoTenInput.disabled = false;
+    if (soDienThoaiInput) soDienThoaiInput.disabled = false;
   }
 }

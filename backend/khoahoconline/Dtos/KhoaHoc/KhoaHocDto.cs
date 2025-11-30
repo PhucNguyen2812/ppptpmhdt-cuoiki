@@ -33,5 +33,8 @@ namespace khoahoconline.Dtos.KhoaHoc
         public int? IdGiangVien { get; set; }
         public string? TenGiangVien { get; set; }
         public string? AnhDaiDienGiangVien { get; set; }
+
+        // Trạng thái kiểm duyệt mới nhất (cho instructor dashboard)
+        public string? TrangThaiKiemDuyet { get; set; }
     }
 }

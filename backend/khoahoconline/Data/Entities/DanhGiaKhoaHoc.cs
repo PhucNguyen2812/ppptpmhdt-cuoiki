@@ -19,10 +19,13 @@ public partial class DanhGiaKhoaHoc
 
     public int DiemDanhGia { get; set; }
 
-    public string? NoiDung { get; set; }
+    [Column("BinhLuan")]
+    public string? BinhLuan { get; set; }
 
     [Column(TypeName = "datetime")]
     public DateTime? NgayDanhGia { get; set; }
+
+    public bool? TrangThai { get; set; }
 
     [Column(TypeName = "datetime")]
     public DateTime? NgayCapNhat { get; set; }

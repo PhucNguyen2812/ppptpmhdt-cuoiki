@@ -22,11 +22,12 @@ export async function getCategories(pageNumber = 1, pageSize = 100) {
 }
 
 /**
- * Get all categories without pagination
+ * Get all active categories without pagination (PUBLIC endpoint)
  */
 export async function getAllCategories() {
   try {
-    const response = await apiFetch(API_ENDPOINTS.CATEGORIES_ALL);
+    // Use public endpoint instead of /all which requires ADMIN role
+    const response = await apiFetch(API_ENDPOINTS.CATEGORIES);
     
     if (!response.ok) {
       throw new Error('Failed to fetch all categories');

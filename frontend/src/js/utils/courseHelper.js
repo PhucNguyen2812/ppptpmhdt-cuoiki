@@ -114,7 +114,7 @@ export function formatRatingCount(count) {
  * Get course URL
  */
 export function getCourseUrl(courseId) {
-  return `/pages/course-detail.html?id=${courseId}`;
+  return `course-detail.html?id=${courseId}`;
 }
 
 /**

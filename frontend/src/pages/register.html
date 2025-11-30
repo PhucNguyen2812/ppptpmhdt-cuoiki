@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Đăng ký tài khoản học viên">
+    
+    <!-- Content Security Policy -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        style-src 'self' 'unsafe-inline';
+        script-src 'self' 'unsafe-inline';
+        img-src 'self' data: https:;
+        font-src 'self';
+        connect-src 'self' http://localhost:5228 https://localhost:7043 wss://localhost:5500 ws://localhost:5500;
+        base-uri 'self';
+        form-action 'self';
+    ">
+    
+    <title>Đăng ký - UHIHI</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/reset.css" />
+    <link rel="stylesheet" href="../css/base.css" />
+    <link rel="stylesheet" href="../css/login.css" />
+</head>
+<body class="login-page">
+    <main class="login">
+        <header class="login__header">
+            <h1>Đăng ký tài khoản</h1>
+            <p>Tham gia cộng đồng học tập của chúng tôi</p>
+        </header>
+
+        <div id="alertMessage" class="login__alert"></div>
+
+        <form class="login__form" id="registerForm" autocomplete="on">
+            <div class="login__field">
+                <label for="hoTen" class="login__label">Họ và tên</label>
+                <input 
+                    type="text" 
+                    id="hoTen" 
+                    name="hoTen" 
+                    class="login__input" 
+                    placeholder="Nhập họ và tên" 
+                    required 
+                    autocomplete="name"
+                    aria-label="Họ và tên"
+                />
+            </div>
+
+            <div class="login__field">
+                <label for="email" class="login__label">Email</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    class="login__input" 
+                    placeholder="Nhập địa chỉ email" 
+                    required 
+                    autocomplete="email"
+                    aria-label="Email"
+                />
+            </div>
+            
+            <div class="login__field">
+                <label for="matKhau" class="login__label">Mật khẩu</label>
+                <input 
+                    type="password" 
+                    id="matKhau" 
+                    name="matKhau" 
+                    class="login__input" 
+                    placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)" 
+                    required 
+                    minlength="6"
+                    autocomplete="new-password"
+                    aria-label="Mật khẩu"
+                />
+            </div>
+
+            <div class="login__field">
+                <label for="soDienThoai" class="login__label">Số điện thoại <span style="color: #999; font-size: 0.9em;">(tùy chọn)</span></label>
+                <input 
+                    type="tel" 
+                    id="soDienThoai" 
+                    name="soDienThoai" 
+                    class="login__input" 
+                    placeholder="Nhập số điện thoại" 
+                    autocomplete="tel"
+                    aria-label="Số điện thoại"
+                />
+            </div>
+
+            <button type="submit" class="login__button" id="registerButton">
+                <span class="login__button-text--default">Đăng ký</span>
+                <span class="login__button-text--loading">
+                    <span class="login__spinner"></span> Đang xử lý...
+                </span> 
+            </button>
+        </form>
+
+        <footer class="login__footer">
+            <span>Đã có tài khoản?</span>
+            <a href="login.html" class="login__link">Đăng nhập ngay</a>
+        </footer>
+    </main>
+
+    <!-- JavaScript Module -->
+    <script type="module" src="../js/pages/register.js"></script>
+</body>
+</html>
+

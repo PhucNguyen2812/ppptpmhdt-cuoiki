@@ -1,4 +1,8 @@
 // Main Application Logic
+import AuthHelper from './utils/authHelper.js';
+import { API } from './api/index.js';
+import { DEFAULT_IMAGES } from './config.js';
+import { getStars, formatPrice } from './utils/courseHelper.js';
 
 // ===== DOM Elements =====
 const elements = {
@@ -31,77 +35,160 @@ const elements = {
 };
 
 // ===== Initialize App =====
-document.addEventListener('DOMContentLoaded', () => {
-    initializeAuth();
-    loadCategories();
-    loadFeaturedCourses();
-    loadBestSellingCourses();
-    loadNewestCourses();
+document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize auth first (which will show/hide appropriate UI)
+    await initializeAuth();
+    
+    // Then setup event listeners
     setupEventListeners();
+    
+    // Load cart count
     loadCartCount();
+    
+    // Only load these if elements exist (not on course-detail page)
+    if (elements.categoryNav) {
+        loadCategories();
+    }
+    if (elements.featuredCourses) {
+        loadFeaturedCourses();
+    }
+    if (elements.bestSellingCourses) {
+        loadBestSellingCourses();
+    }
+    if (elements.newestCourses) {
+        loadNewestCourses();
+    }
+    if (elements.categoriesGrid) {
+        // Categories grid will be loaded in loadCategories if categoryNav exists
+    }
 });
 
 // ===== Auth Initialization =====
-function initializeAuth() {
-    if (AuthHelper.isLoggedIn()) {
-        const userInfo = AuthHelper.getUserInfo();
-        showUserMenu(userInfo);
-        
-        // Show instructor button if user is instructor
-        if (AuthHelper.isInstructor()) {
+async function initializeAuth() {
+    try {
+        if (AuthHelper.isLoggedIn()) {
+            const userInfo = await AuthHelper.getUserInfo();
+            if (userInfo) {
+                showUserMenu(userInfo);
+                
+                // Check if user is instructor and update buttons accordingly
+                const isInstructor = await AuthHelper.isInstructor();
+                updateInstructorButtons(isInstructor);
+            } else {
+                // Failed to get user info, show auth buttons
+                showAuthButtons();
+                updateInstructorButtons(false);
+            }
+        } else {
+            // Not logged in, show auth buttons
+            showAuthButtons();
+            updateInstructorButtons(false);
+        }
+    } catch (error) {
+        console.error('Error initializing auth:', error);
+        // On error, show auth buttons as fallback
+        showAuthButtons();
+        updateInstructorButtons(false);
+    }
+}
+
+// Helper function to update instructor/teach buttons visibility
+function updateInstructorButtons(isInstructor) {
+    if (elements.instructorBtn && elements.teachBtn) {
+        if (isInstructor) {
+            // User has GIANGVIEN role (có thể có cả HOCVIEN và GIANGVIEN): 
+            // show instructor button, hide teach button
             elements.instructorBtn.style.display = 'block';
             elements.teachBtn.style.display = 'none';
+        } else {
+            // User only has HOCVIEN role (chỉ có role HOCVIEN): 
+            // hide instructor button, show teach button
+            elements.instructorBtn.style.display = 'none';
+            elements.teachBtn.style.display = 'block';
         }
-    } else {
-        showAuthButtons();
     }
 }
 
 function showUserMenu(userInfo) {
-    elements.userMenu.style.display = 'block';
-    elements.authButtons.style.display = 'none';
+    // Hide auth buttons first
+    if (elements.authButtons) {
+        elements.authButtons.style.display = 'none';
+    }
+    
+    // Show user menu
+    if (elements.userMenu) {
+        elements.userMenu.style.display = 'block';
+    }
     
     if (userInfo) {
         // Set user info
-        elements.userName.textContent = userInfo.hoTen || userInfo.email;
-        elements.userEmail.textContent = userInfo.email;
+        if (elements.userName) {
+            elements.userName.textContent = userInfo.hoTen || userInfo.email || 'Người dùng';
+        }
+        if (elements.userEmail) {
+            elements.userEmail.textContent = userInfo.email || '';
+        }
         
         // Set avatar
-        if (userInfo.anhDaiDien) {
-            elements.userAvatar.src = userInfo.anhDaiDien;
-            document.getElementById('dropdownAvatar').src = userInfo.anhDaiDien;
-        } else {
-            elements.userAvatar.src = DEFAULT_IMAGES.AVATAR;
-            document.getElementById('dropdownAvatar').src = DEFAULT_IMAGES.AVATAR;
+        const avatarUrl = userInfo.anhDaiDien || DEFAULT_IMAGES.AVATAR;
+        if (elements.userAvatar) {
+            elements.userAvatar.src = avatarUrl;
+            elements.userAvatar.onerror = function() {
+                this.src = DEFAULT_IMAGES.AVATAR;
+            };
+        }
+        const dropdownAvatar = document.getElementById('dropdownAvatar');
+        if (dropdownAvatar) {
+            dropdownAvatar.src = avatarUrl;
+            dropdownAvatar.onerror = function() {
+                this.src = DEFAULT_IMAGES.AVATAR;
+            };
         }
     }
 }
 
 function showAuthButtons() {
-    elements.userMenu.style.display = 'none';
-    elements.authButtons.style.display = 'flex';
+    // Hide user menu first
+    if (elements.userMenu) {
+        elements.userMenu.style.display = 'none';
+    }
+    
+    // Hide dropdown if it's open
+    if (elements.dropdownMenu) {
+        elements.dropdownMenu.classList.remove('show');
+    }
+    
+    // Show auth buttons
+    if (elements.authButtons) {
+        elements.authButtons.style.display = 'flex';
+    }
 }
 
 // ===== Event Listeners =====
 function setupEventListeners() {
     // Search
-    elements.searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            handleSearch();
-        }
-    });
+    if (elements.searchInput) {
+        elements.searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleSearch();
+            }
+        });
+    }
     
     // User menu dropdown
-    if (elements.userMenu) {
-        elements.userMenu.addEventListener('click', () => {
+    if (elements.userMenu && elements.dropdownMenu) {
+        elements.userMenu.addEventListener('click', (e) => {
+            e.stopPropagation();
             elements.dropdownMenu.classList.toggle('show');
         });
     }
     
     // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
-        if (!elements.userMenu.contains(e.target)) {
-            elements.dropdownMenu.classList.remove('show');
+        if (elements.userMenu && elements.dropdownMenu) {
+            if (!elements.userMenu.contains(e.target) && !elements.dropdownMenu.contains(e.target)) {
+                elements.dropdownMenu.classList.remove('show');
+            }
         }
     });
     
@@ -113,17 +200,31 @@ function setupEventListeners() {
         });
     }
     
-    // Login button
+    // Login button - only navigate if button is visible and user is not logged in
     if (elements.loginBtn) {
-        elements.loginBtn.addEventListener('click', () => {
-            window.location.href = 'login.html';
+        elements.loginBtn.addEventListener('click', (e) => {
+            // Only navigate if user is not logged in
+            // Check if auth buttons container is visible (not display: none)
+            const authButtonsVisible = elements.authButtons && 
+                window.getComputedStyle(elements.authButtons).display !== 'none';
+            
+            if (authButtonsVisible && !AuthHelper.isLoggedIn()) {
+                window.location.href = 'login.html';
+            }
         });
     }
     
-    // Signup button
+    // Signup button - only navigate if button is visible and user is not logged in
     if (elements.signupBtn) {
-        elements.signupBtn.addEventListener('click', () => {
-            window.location.href = 'register.html';
+        elements.signupBtn.addEventListener('click', (e) => {
+            // Only navigate if user is not logged in
+            // Check if auth buttons container is visible (not display: none)
+            const authButtonsVisible = elements.authButtons && 
+                window.getComputedStyle(elements.authButtons).display !== 'none';
+            
+            if (authButtonsVisible && !AuthHelper.isLoggedIn()) {
+                window.location.href = 'register.html';
+            }
         });
     }
     
@@ -142,6 +243,18 @@ function setupEventListeners() {
     if (elements.instructorBtn) {
         elements.instructorBtn.addEventListener('click', () => {
             window.location.href = 'instructor-dashboard.html';
+        });
+    }
+    
+    // Cart link
+    if (elements.cartLink) {
+        elements.cartLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (AuthHelper.isLoggedIn()) {
+                window.location.href = 'my-cart.html';
+            } else {
+                window.location.href = 'login.html?redirect=my-cart';
+            }
         });
     }
 }
@@ -177,6 +290,8 @@ async function loadCategories() {
 }
 
 function renderCategoryNav(categories) {
+    if (!elements.categoryNav) return;
+    
     const html = categories.slice(0, 10).map(cat => `
         <a href="courses.html?categoryId=${cat.id}">${cat.tenDanhMuc}</a>
     `).join('');
@@ -185,6 +300,8 @@ function renderCategoryNav(categories) {
 }
 
 function renderCategoriesGrid(categories) {
+    if (!elements.categoriesGrid) return;
+    
     const icons = ['📚', '💼', '💰', '💻', '📊', '🎯', '🎨', '📱', '🏃', '🎵'];
     
     const html = categories.map((cat, index) => `
@@ -200,6 +317,8 @@ function renderCategoriesGrid(categories) {
 
 // ===== Load Featured Courses =====
 async function loadFeaturedCourses() {
+    if (!elements.featuredCourses) return;
+    
     try {
         const response = await API.getFeaturedCourses(8);
         
@@ -208,12 +327,16 @@ async function loadFeaturedCourses() {
         }
     } catch (error) {
         console.error('Error loading featured courses:', error);
-        elements.featuredCourses.innerHTML = '<p>Không thể tải khóa học nổi bật</p>';
+        if (elements.featuredCourses) {
+            elements.featuredCourses.innerHTML = '<p>Không thể tải khóa học nổi bật</p>';
+        }
     }
 }
 
 // ===== Load Best Selling Courses =====
 async function loadBestSellingCourses() {
+    if (!elements.bestSellingCourses) return;
+    
     try {
         const response = await API.getBestSellingCourses(8);
         
@@ -222,12 +345,16 @@ async function loadBestSellingCourses() {
         }
     } catch (error) {
         console.error('Error loading best-selling courses:', error);
-        elements.bestSellingCourses.innerHTML = '<p>Không thể tải khóa học bán chạy</p>';
+        if (elements.bestSellingCourses) {
+            elements.bestSellingCourses.innerHTML = '<p>Không thể tải khóa học bán chạy</p>';
+        }
     }
 }
 
 // ===== Load Newest Courses =====
 async function loadNewestCourses() {
+    if (!elements.newestCourses) return;
+    
     try {
         const response = await API.getNewestCourses(8);
         
@@ -236,7 +363,9 @@ async function loadNewestCourses() {
         }
     } catch (error) {
         console.error('Error loading newest courses:', error);
-        elements.newestCourses.innerHTML = '<p>Không thể tải khóa học mới nhất</p>';
+        if (elements.newestCourses) {
+            elements.newestCourses.innerHTML = '<p>Không thể tải khóa học mới nhất</p>';
+        }
     }
 }
 
@@ -285,9 +414,12 @@ function renderCourses(courses, container) {
 
 // ===== Load Cart Count =====
 async function loadCartCount() {
+    if (!elements.cartBadge) return;
+    
     try {
         if (AuthHelper.isLoggedIn()) {
-            const response = await API.getCartCount();
+            const { getCartCount } = await import('./api/cartApi.js');
+            const response = await getCartCount();
             if (response.success) {
                 elements.cartBadge.textContent = response.data || 0;
             }
@@ -296,28 +428,14 @@ async function loadCartCount() {
         }
     } catch (error) {
         console.error('Error loading cart count:', error);
-        elements.cartBadge.textContent = 0;
+        if (elements.cartBadge) {
+            elements.cartBadge.textContent = 0;
+        }
     }
 }
 
-// ===== Helper Functions =====
-function getStars(rating) {
-    const fullStars = Math.floor(rating);
-    const halfStar = rating % 1 >= 0.5 ? 1 : 0;
-    const emptyStars = 5 - fullStars - halfStar;
-    
-    return '★'.repeat(fullStars) + 
-           (halfStar ? '☆' : '') + 
-           '☆'.repeat(emptyStars);
-}
-
-function formatPrice(price) {
-    if (!price) return 'Miễn phí';
-    return new Intl.NumberFormat('vi-VN', { 
-        style: 'currency', 
-        currency: 'VND' 
-    }).format(price);
-}
+// Export loadCartCount for use in other pages
+window.loadCartCount = loadCartCount;
 
 // ===== Error Handler =====
 window.addEventListener('error', (e) => {

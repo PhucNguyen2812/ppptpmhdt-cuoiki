@@ -185,7 +185,7 @@ namespace khoahoconline.Controllers
         /// [USER] Đăng ký làm giảng viên
         /// </summary>
         [HttpPost("register-instructor")]
-        [Authorize(Roles = "USER")]
+        [Authorize(Roles = "HOCVIEN")]
         public async Task<IActionResult> RegisterAsInstructor()
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");

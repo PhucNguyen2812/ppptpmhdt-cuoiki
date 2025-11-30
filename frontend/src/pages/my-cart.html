@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Giỏ hàng của tôi">
+    <title>Giỏ hàng - UHIHI</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/reset.css" />
+    <link rel="stylesheet" href="../css/base.css" />
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/cart.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-top">
+            <div class="container">
+                <div class="header-content">
+                    <!-- Logo -->
+                    <div class="logo">
+                        <a href="index.html">
+                            <h1>UHIHI</h1>
+                        </a>
+                    </div>
+
+                    <!-- Header Actions -->
+                    <div class="header-actions">
+                        <a href="index.html" class="btn-secondary">Trang chủ</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="cart-page">
+        <div class="container">
+            <h1 class="page-title">Giỏ hàng của tôi</h1>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="loading-state">
+                <div class="spinner"></div>
+                <p>Đang tải giỏ hàng...</p>
+            </div>
+
+            <!-- Empty Cart State -->
+            <div id="emptyCartState" class="empty-cart" style="display: none;">
+                <i class="fas fa-shopping-cart"></i>
+                <h2>Giỏ hàng của bạn đang trống</h2>
+                <p>Hãy khám phá các khóa học và thêm vào giỏ hàng!</p>
+                <a href="index.html" class="btn-primary">Khám phá khóa học</a>
+            </div>
+
+            <!-- Cart Content -->
+            <div id="cartContent" class="cart-content" style="display: none;">
+                <div class="cart-layout">
+                    <!-- Cart Items -->
+                    <div class="cart-items-section">
+                        <div class="cart-header">
+                            <h2>Khóa học trong giỏ hàng</h2>
+                            <button id="clearCartBtn" class="btn-link">Xóa tất cả</button>
+                        </div>
+                        <div id="cartItemsList" class="cart-items-list">
+                            <!-- Cart items will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Cart Summary -->
+                    <div class="cart-summary-section">
+                        <div class="cart-summary">
+                            <h3>Tổng kết</h3>
+                            <div class="summary-row">
+                                <span>Tổng tiền gốc:</span>
+                                <span id="totalPrice">0 ₫</span>
+                            </div>
+                            <div class="summary-row">
+                                <span>Giảm giá:</span>
+                                <span id="discount">0 ₫</span>
+                            </div>
+                            <div class="summary-row summary-total">
+                                <span>Tổng thanh toán:</span>
+                                <span id="totalPayment">0 ₫</span>
+                            </div>
+                            <button id="checkoutBtn" class="btn-primary btn-checkout">
+                                Thanh toán
+                            </button>
+                            <p class="summary-note">
+                                <i class="fas fa-shield-alt"></i>
+                                Được bảo vệ bởi chính sách hoàn tiền 30 ngày
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-column">
+                    <h4>UHIHI Business</h4>
+                    <ul>
+                        <li><a href="#">Giảng dạy trên UHIHI</a></li>
+                        <li><a href="#">Tải ứng dụng</a></li>
+                        <li><a href="#">Giới thiệu</a></li>
+                        <li><a href="#">Liên hệ</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <div class="footer-logo">
+                    <h3>UHIHI</h3>
+                </div>
+                <div class="footer-copyright">
+                    <p>&copy; 2024 UHIHI, Inc.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script type="module" src="../js/pages/cart.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+

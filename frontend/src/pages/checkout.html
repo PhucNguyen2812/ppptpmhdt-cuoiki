@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thanh toán - Khóa học trực tuyến</title>
+    <link rel="stylesheet" href="../css/reset.css">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/cart.css">
+    <link rel="stylesheet" href="../css/checkout.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header id="main-header"></header>
+
+    <!-- Main Content -->
+    <main class="checkout-container">
+        <div class="checkout-wrapper">
+            <h1 class="checkout-title">Thanh toán</h1>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="loading-state">
+                <div class="spinner"></div>
+                <p>Đang tải...</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="errorState" class="error-state" style="display: none;">
+                <i class="fas fa-exclamation-circle"></i>
+                <p id="errorMessage"></p>
+                <button onclick="window.location.href='my-cart.html'" class="btn-primary">Quay lại giỏ hàng</button>
+            </div>
+
+            <!-- Checkout Content -->
+            <div id="checkoutContent" class="checkout-content" style="display: none;">
+                <div class="checkout-grid">
+                    <!-- Left Column: Order Summary -->
+                    <div class="checkout-left">
+                        <div class="order-summary">
+                            <h2>Đơn hàng của bạn</h2>
+                            
+                            <!-- Order Items -->
+                            <div id="orderItems" class="order-items"></div>
+
+                            <!-- Voucher Section -->
+                            <div class="voucher-section">
+                                <div class="voucher-input-group">
+                                    <input 
+                                        type="text" 
+                                        id="voucherCode" 
+                                        class="voucher-input" 
+                                        placeholder="Nhập mã giảm giá"
+                                    >
+                                    <button id="applyVoucherBtn" class="btn-apply-voucher">Áp dụng</button>
+                                </div>
+                                <div id="voucherMessage" class="voucher-message"></div>
+                            </div>
+
+                            <!-- Order Summary -->
+                            <div class="order-summary-total">
+                                <div class="summary-row">
+                                    <span>Tổng tiền:</span>
+                                    <span id="totalPrice">0 ₫</span>
+                                </div>
+                                <div class="summary-row" id="discountRow" style="display: none;">
+                                    <span>Giảm giá:</span>
+                                    <span id="discountAmount" class="discount-amount">0 ₫</span>
+                                </div>
+                                <div class="summary-row total-row">
+                                    <span>Tổng thanh toán:</span>
+                                    <span id="totalPayment" class="total-payment">0 ₫</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Payment Form -->
+                    <div class="checkout-right">
+                        <div class="payment-section">
+                            <h2>Thông tin thanh toán</h2>
+
+                            <!-- Stripe Payment Form -->
+                            <form id="paymentForm">
+                                <div id="cardElement" class="card-element">
+                                    <!-- Stripe Elements will create form elements here -->
+                                </div>
+                                <div id="cardErrors" class="card-errors" role="alert"></div>
+
+                                <button type="submit" id="submitPaymentBtn" class="btn-pay-now">
+                                    <span id="submitBtnText">Thanh toán</span>
+                                    <span id="submitBtnLoading" style="display: none;">
+                                        <i class="fas fa-spinner fa-spin"></i> Đang xử lý...
+                                    </span>
+                                </button>
+                            </form>
+
+                            <div class="payment-info">
+                                <p><i class="fas fa-lock"></i> Thanh toán an toàn với Stripe</p>
+                                <p class="test-card-info">
+                                    <strong>Thẻ test:</strong> 4242 4242 4242 4242 | Ngày hết hạn: 12/25 | CVC: 123
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer id="main-footer"></footer>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="success-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h2>Thanh toán thành công!</h2>
+            <p>Đơn hàng của bạn đã được xử lý thành công.</p>
+            <div class="modal-actions">
+                <button onclick="window.location.href='index.html'" class="btn-primary">Về trang chủ</button>
+                <button onclick="viewOrders()" class="btn-secondary">Xem đơn hàng</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="../js/pages/checkout.js"></script>
+    <script type="module" src="../js/main.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,33 @@
+### Test API Get Courses by Instructor
+### File này dùng để test API endpoint /api/v1/courses/instructor/{instructorId}
+
+### Test 1: Get courses with valid instructor ID
+GET http://localhost:5228/api/v1/courses/instructor/1?pageNumber=1&pageSize=10
+Accept: application/json
+
+### Test 2: Get courses with invalid instructor ID (should return 404)
+GET http://localhost:5228/api/v1/courses/instructor/99999?pageNumber=1&pageSize=10
+Accept: application/json
+
+### Test 3: Get courses with instructor ID = 0 (edge case)
+GET http://localhost:5228/api/v1/courses/instructor/0?pageNumber=1&pageSize=10
+Accept: application/json
+
+### Test 4: Get courses with negative instructor ID (edge case)
+GET http://localhost:5228/api/v1/courses/instructor/-1?pageNumber=1&pageSize=10
+Accept: application/json
+
+### Test 5: Get courses with invalid pagination (negative page number)
+GET http://localhost:5228/api/v1/courses/instructor/1?pageNumber=-1&pageSize=10
+Accept: application/json
+
+### Test 6: Get courses with invalid pagination (zero page size)
+GET http://localhost:5228/api/v1/courses/instructor/1?pageNumber=1&pageSize=0
+Accept: application/json
+
+### Test 7: Get courses with very large page size
+GET http://localhost:5228/api/v1/courses/instructor/1?pageNumber=1&pageSize=1000
+Accept: application/json
+
+
+
