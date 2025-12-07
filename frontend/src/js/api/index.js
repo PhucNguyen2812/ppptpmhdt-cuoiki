@@ -15,6 +15,10 @@ export const API = {
   getCategories: categoryApi.getCategories,
   getAllCategories: categoryApi.getAllCategories,
   getCategoryById: categoryApi.getCategoryById,
+  createCategory: categoryApi.createCategory,
+  updateCategory: categoryApi.updateCategory,
+  deleteCategory: categoryApi.deleteCategory,
+  restoreCategory: categoryApi.restoreCategory,
   
   // Course APIs
   getCourses: courseApi.getCourses,
@@ -46,7 +50,7 @@ export const API = {
   createUser: nguoiDungApi.createUser,
   updateUser: nguoiDungApi.updateUser,
   deleteUser: nguoiDungApi.deleteUser,
-  registerAsInstructor: nguoiDungApi.registerAsInstructor,
+  // registerAsInstructor: DEPRECATED - Use instructorRequestApi.createInstructorRequest instead
   getProfile: nguoiDungApi.getProfile
 };
 

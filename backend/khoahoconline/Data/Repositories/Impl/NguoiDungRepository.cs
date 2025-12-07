@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using khoahoconline.Data.Entities;
 using khoahoconline.Dtos;
+using System.Linq;
 
 namespace khoahoconline.Data.Repositories.Impl
 {
@@ -90,10 +91,50 @@ namespace khoahoconline.Data.Repositories.Impl
 
         public async Task<List<string>> GetUserRolesAsync(int userId)
         {
-            return await _context.NguoiDungVaiTros
+            try
+            {
+                var userRoles = await _context.NguoiDungVaiTros
+                    .Where(ndvt => ndvt.IdNguoiDung == userId)
+                    .Select(ndvt => ndvt.IdVaiTro)
+                    .ToListAsync();
+
+                if (userRoles == null || !userRoles.Any())
+                {
+                    return new List<string>();
+                }
+
+                var roles = await _context.VaiTros
+                    .Where(vt => userRoles.Contains(vt.Id))
+                    .Select(vt => vt.TenVaiTro)
+                    .ToListAsync();
+
+                return roles ?? new List<string>();
+            }
+            catch (Exception)
+            {
+                // Return empty list if there's an error
+                return new List<string>();
+            }
+        }
+
+        public async Task RemoveRoleFromUserAsync(int userId, int roleId)
+        {
+            var userRole = await _context.NguoiDungVaiTros
+                .FirstOrDefaultAsync(ndvt => ndvt.IdNguoiDung == userId && ndvt.IdVaiTro == roleId);
+
+            if (userRole != null)
+            {
+                _context.NguoiDungVaiTros.Remove(userRole);
+            }
+        }
+
+        public async Task RemoveAllRolesFromUserAsync(int userId)
+        {
+            var userRoles = await _context.NguoiDungVaiTros
                 .Where(ndvt => ndvt.IdNguoiDung == userId)
-                .Select(ndvt => ndvt.IdVaiTroNavigation!.TenVaiTro)
                 .ToListAsync();
+
+            _context.NguoiDungVaiTros.RemoveRange(userRoles);
         }
         
     }

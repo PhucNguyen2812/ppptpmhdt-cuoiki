@@ -275,7 +275,7 @@ export async function hideCourse(courseId) {
 }
 
 /**
- * Unhide a course (Instructor only) - requires approval
+ * Unhide a course (Instructor only)
  */
 export async function unhideCourse(courseId) {
   try {
@@ -330,38 +330,6 @@ export async function getCourseForEdit(courseId) {
   }
 }
 
-/**
- * Get course for review (Admin/Reviewer only) - includes curriculum
- */
-export async function getCourseForReview(courseId) {
-  try {
-    const url = `${API_ENDPOINTS.COURSES}/${courseId}/for-review`;
-    const response = await apiFetch(url);
-    
-    if (!response.ok) {
-      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorData.data || errorMessage;
-      } catch (e) {
-        if (response.status === 404) {
-          errorMessage = 'Không tìm thấy khóa học';
-        } else if (response.status === 401) {
-          errorMessage = 'Bạn cần đăng nhập lại';
-        } else if (response.status === 403) {
-          errorMessage = 'Bạn không có quyền xem khóa học này';
-        }
-      }
-      throw new Error(errorMessage);
-    }
-    
-    const result = await response.json();
-    return result;
-  } catch (error) {
-    console.error('Error fetching course for review:', error);
-    throw error;
-  }
-}
 
 /**
  * Update course with curriculum (Instructor only)
@@ -384,149 +352,6 @@ export async function updateCourseWithCurriculum(courseId, courseData) {
     return await response.json();
   } catch (error) {
     console.error('Error updating course with curriculum:', error);
-    throw error;
-  }
-}
-
-/**
- * Get pending courses (Admin/Reviewer only)
- */
-export async function getPendingCourses() {
-  try {
-    const response = await apiFetch(API_ENDPOINTS.COURSES_PENDING);
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch pending courses');
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching pending courses:', error);
-    throw error;
-  }
-}
-
-/**
- * Get all course approvals with optional status filter (Admin/Reviewer only)
- */
-export async function getAllCourseApprovals(status = null) {
-  try {
-    const url = status 
-      ? `${API_ENDPOINTS.COURSES_APPROVALS}?status=${encodeURIComponent(status)}`
-      : API_ENDPOINTS.COURSES_APPROVALS;
-    
-    const response = await apiFetch(url);
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch course approvals');
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching course approvals:', error);
-    throw error;
-  }
-}
-
-/**
- * Approve a course (Admin/Reviewer only)
- */
-export async function approveCourse(courseId, ghiChu = null) {
-  try {
-    const response = await apiFetch(`${API_ENDPOINTS.COURSES}/${courseId}/approve`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ ghiChu })
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || error.data || 'Failed to approve course');
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error approving course:', error);
-    throw error;
-  }
-}
-
-/**
- * Reject a course (Admin/Reviewer only)
- */
-export async function rejectCourse(courseId, lyDoTuChoi, ghiChu = null) {
-  try {
-    const response = await apiFetch(`${API_ENDPOINTS.COURSES}/${courseId}/reject`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ 
-        lyDoTuChoi,
-        ghiChu 
-      })
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || error.data || 'Failed to reject course');
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error rejecting course:', error);
-    throw error;
-  }
-}
-
-/**
- * Hide a course by admin (Admin/Reviewer only)
- */
-export async function hideCourseByAdmin(courseId, ghiChu = null) {
-  try {
-    const response = await apiFetch(`${API_ENDPOINTS.COURSES}/${courseId}/hide-by-admin`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ ghiChu })
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || error.data || 'Failed to hide course');
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error hiding course by admin:', error);
-    throw error;
-  }
-}
-
-/**
- * Unhide a course by admin (Admin/Reviewer only)
- */
-export async function unhideCourseByAdmin(courseId, ghiChu = null) {
-  try {
-    const response = await apiFetch(`${API_ENDPOINTS.COURSES}/${courseId}/unhide-by-admin`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ ghiChu })
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || error.data || 'Failed to unhide course');
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error unhiding course by admin:', error);
     throw error;
   }
 }

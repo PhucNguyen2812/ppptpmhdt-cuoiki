@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using khoahoconline.Data.Entities;
 using khoahoconline.Helpers;
-using static khoahoconline.Helpers.KiemDuyetConstants;
 
 namespace khoahoconline.Data
 {
@@ -18,7 +17,6 @@ namespace khoahoconline.Data
                 var adminRole = await EnsureRoleAsync(context, "ADMIN", "Quản trị viên hệ thống");
                 var giangVienRole = await EnsureRoleAsync(context, "GIANGVIEN", "Giảng viên");
                 var hocVienRole = await EnsureRoleAsync(context, "HOCVIEN", "Học viên");
-                var kiemDuyetRole = await EnsureRoleAsync(context, "KIEMDUYET", "Kiểm duyệt viên");
 
                 await context.SaveChangesAsync();
 
@@ -35,9 +33,6 @@ namespace khoahoconline.Data
                 var admin = await EnsureUserAsync(context, "admin@gmail.com", "admin123", "Nguyễn Văn Admin", adminRole.Id);
                 await EnsureUserRoleAsync(context, admin.Id, adminRole.Id);
 
-                // ===== TẠO TÀI KHOẢN KIỂM DUYỆT =====
-                var kiemDuyet = await EnsureUserAsync(context, "kiemduyet@gmail.com", "kiemduyet123", "Trần Thị Kiểm Duyệt", kiemDuyetRole.Id);
-                await EnsureUserRoleAsync(context, kiemDuyet.Id, kiemDuyetRole.Id);
 
                 // ===== TẠO 3 TÀI KHOẢN HỌC VIÊN THUẦN TÚY =====
                 var hocVien1 = await EnsureUserAsync(context, "hocvien1@gmail.com", "hocvien123", "Lê Văn Học Viên 1", hocVienRole.Id);
@@ -246,23 +241,6 @@ namespace khoahoconline.Data
                 await UpdateDangKyKhoaHocFromOrderAsync(context, donHang2.Id, hocVien2.Id, new[] { khoaHoc3.Id });
 
                 await context.SaveChangesAsync();
-
-                // ===== TẠO KIỂM DUYỆT KHÓA HỌC =====
-                // Khóa học 1: Đã được duyệt
-                await CreateKiemDuyetKhoaHocAsync(context, khoaHoc1.Id, 1, giangVien1.Id, kiemDuyet.Id, 
-                    DaDuyet, DateTime.UtcNow.AddDays(-10), DateTime.UtcNow.AddDays(-9));
-
-                // Khóa học 2: Đã được duyệt
-                await CreateKiemDuyetKhoaHocAsync(context, khoaHoc2.Id, 1, giangVien1.Id, kiemDuyet.Id,
-                    DaDuyet, DateTime.UtcNow.AddDays(-8), DateTime.UtcNow.AddDays(-7));
-
-                // Khóa học 3: Đã được duyệt
-                await CreateKiemDuyetKhoaHocAsync(context, khoaHoc3.Id, 1, giangVien2.Id, kiemDuyet.Id,
-                    DaDuyet, DateTime.UtcNow.AddDays(-6), DateTime.UtcNow.AddDays(-5));
-
-                // Khóa học 4: Đã được duyệt
-                await CreateKiemDuyetKhoaHocAsync(context, khoaHoc4.Id, 1, giangVien2.Id, kiemDuyet.Id,
-                    DaDuyet, DateTime.UtcNow.AddDays(-4), DateTime.UtcNow.AddDays(-3));
 
                 await context.SaveChangesAsync();
 
@@ -661,26 +639,6 @@ namespace khoahoconline.Data
             }
         }
 
-        private static async Task CreateKiemDuyetKhoaHocAsync(CourseOnlDbContext context, int idKhoaHoc, int phienBan, int idNguoiGui, int? idNguoiKiemDuyet, string trangThaiKiemDuyet, DateTime ngayGui, DateTime? ngayKiemDuyet)
-        {
-            var exists = await context.KiemDuyetKhoaHocs
-                .AnyAsync(kd => kd.IdKhoaHoc == idKhoaHoc && kd.PhienBan == phienBan);
-            
-            if (!exists)
-            {
-                await context.KiemDuyetKhoaHocs.AddAsync(new KiemDuyetKhoaHoc
-                {
-                    IdKhoaHoc = idKhoaHoc,
-                    PhienBan = phienBan,
-                    TrangThaiKiemDuyet = trangThaiKiemDuyet,
-                    IdNguoiGui = idNguoiGui,
-                    IdNguoiKiemDuyet = idNguoiKiemDuyet,
-                    NgayGui = ngayGui,
-                    NgayKiemDuyet = ngayKiemDuyet,
-                    GhiChu = trangThaiKiemDuyet == DaDuyet ? "Khóa học đáp ứng đầy đủ yêu cầu chất lượng" : null
-                });
-            }
-        }
 
         private static async Task<TienDoHocTap?> CreateTienDoHocTapAsync(CourseOnlDbContext context, int idHocVien, int idKhoaHoc)
         {

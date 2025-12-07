@@ -25,7 +25,6 @@ namespace khoahoconline.Services.Impl
         {
             _logger.LogInformation("Create new user");
             var entity = _mapper.Map<NguoiDung>(dto);
-            var role = await _unitOfWork.VaiTroRepository.GetByTenVaiTroAsync("HOCVIEN");
 
             entity.NgayTao = DateTime.Now;
             entity.TrangThai = true;
@@ -34,15 +33,11 @@ namespace khoahoconline.Services.Impl
             await _unitOfWork.NguoiDungRepository.CreateAsync(entity);
             await _unitOfWork.SaveChangesAsync();
 
-            // Create relationship in NguoiDungVaiTro table
-            var nguoiDungVaiTro = new NguoiDungVaiTro
-            {
-                IdNguoiDung = entity.Id,
-                IdVaiTro = role!.Id
-            };
+            // Process roles
             await _unitOfWork.BeginTransactionAsync();
             try
             {
+                await ProcessUserRolesAsync(entity.Id, dto.Roles, isCreate: true);
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
             }
@@ -58,18 +53,44 @@ namespace khoahoconline.Services.Impl
 
         public async Task<PagedResult<NguoiDungDto>> GetAllAsync(int pageNumber, int pageSize, bool active, string? searchTerm = null)
         {
-            var pagedListNguoiDungDtos = await _unitOfWork.NguoiDungRepository.GetPagedListAsync(pageNumber, pageSize, active, searchTerm);
-
-            var NguoiDungDtosItems = pagedListNguoiDungDtos.Items.
-                Select(nguoiDung => _mapper.Map<NguoiDungDto>(nguoiDung)).ToList();
-
-            return new PagedResult<NguoiDungDto>
+            try
             {
-                Items = NguoiDungDtosItems,
-                TotalCount = pagedListNguoiDungDtos.TotalCount,
-                PageNumber = pagedListNguoiDungDtos.PageNumber,
-                PageSize = pagedListNguoiDungDtos.PageSize,
-            };
+                var pagedListNguoiDungDtos = await _unitOfWork.NguoiDungRepository.GetPagedListAsync(pageNumber, pageSize, active, searchTerm);
+
+                var NguoiDungDtosItems = pagedListNguoiDungDtos.Items.Select(async nguoiDung =>
+                {
+                    try
+                    {
+                        var dto = _mapper.Map<NguoiDungDto>(nguoiDung);
+                        // Load roles for each user
+                        dto.VaiTros = await _unitOfWork.NguoiDungRepository.GetUserRolesAsync(nguoiDung.Id);
+                        return dto;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Error loading user {nguoiDung.Id} with roles");
+                        // Return user without roles if there's an error loading roles
+                        var dto = _mapper.Map<NguoiDungDto>(nguoiDung);
+                        dto.VaiTros = new List<string>();
+                        return dto;
+                    }
+                }).ToList();
+
+                var items = await Task.WhenAll(NguoiDungDtosItems);
+
+                return new PagedResult<NguoiDungDto>
+                {
+                    Items = items.ToList(),
+                    TotalCount = pagedListNguoiDungDtos.TotalCount,
+                    PageNumber = pagedListNguoiDungDtos.PageNumber,
+                    PageSize = pagedListNguoiDungDtos.PageSize,
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error in GetAllAsync: pageNumber={pageNumber}, pageSize={pageSize}, active={active}, searchTerm={searchTerm}");
+                throw;
+            }
         }
 
         public async Task<NguoiDungDto?> getByIdAsync(int id)
@@ -125,7 +146,85 @@ namespace khoahoconline.Services.Impl
             
             nguoiDung.NgayCapNhat = DateTime.Now;
             await _unitOfWork.NguoiDungRepository.UpdateAsync(nguoiDung);
+            
+            // Process roles if provided
+            if (dto.Roles != null)
+            {
+                await ProcessUserRolesAsync(id, dto.Roles, isCreate: false);
+            }
+            
             await _unitOfWork.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Process user roles: add/remove roles based on provided list
+        /// Rules:
+        /// - Cannot add ADMIN role
+        /// - If GIANGVIEN is added, automatically add HOCVIEN
+        /// </summary>
+        private async Task ProcessUserRolesAsync(int userId, List<string>? roles, bool isCreate = false)
+        {
+            if (roles == null || roles.Count == 0)
+            {
+                // If no roles provided and creating, default to HOCVIEN
+                if (isCreate)
+                {
+                    var hocVienRole = await _unitOfWork.VaiTroRepository.GetByTenVaiTroAsync("HOCVIEN");
+                    if (hocVienRole != null)
+                    {
+                        await _unitOfWork.NguoiDungRepository.AddRoleToUserAsync(userId, hocVienRole.Id);
+                    }
+                }
+                return;
+            }
+
+            // Remove ADMIN from list if present (not allowed)
+            roles = roles.Where(r => !string.Equals(r, "ADMIN", StringComparison.OrdinalIgnoreCase)).ToList();
+
+            // If GIANGVIEN is in the list, ensure HOCVIEN is also included
+            bool hasGiangVien = roles.Any(r => string.Equals(r, "GIANGVIEN", StringComparison.OrdinalIgnoreCase));
+            bool hasHocVien = roles.Any(r => string.Equals(r, "HOCVIEN", StringComparison.OrdinalIgnoreCase));
+            
+            if (hasGiangVien && !hasHocVien)
+            {
+                roles.Add("HOCVIEN");
+            }
+
+            // Get current user roles
+            var currentRoles = await _unitOfWork.NguoiDungRepository.GetUserRolesAsync(userId);
+            
+            // Get all available roles from database
+            var allRolesList = await _unitOfWork.VaiTroRepository.GetAllAsync();
+            var roleDict = allRolesList.ToDictionary(r => r.TenVaiTro, r => r.Id, StringComparer.OrdinalIgnoreCase);
+
+            // Remove all current roles first (for update) or keep existing (for create)
+            if (!isCreate)
+            {
+                // Remove all roles that are not in the new list
+                foreach (var currentRole in currentRoles)
+                {
+                    if (!roles.Any(r => string.Equals(r, currentRole, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        if (roleDict.TryGetValue(currentRole, out int roleId))
+                        {
+                            await _unitOfWork.NguoiDungRepository.RemoveRoleFromUserAsync(userId, roleId);
+                        }
+                    }
+                }
+            }
+
+            // Add new roles
+            foreach (var roleName in roles)
+            {
+                if (roleDict.TryGetValue(roleName, out int roleId))
+                {
+                    await _unitOfWork.NguoiDungRepository.AddRoleToUserAsync(userId, roleId);
+                }
+                else
+                {
+                    _logger.LogWarning($"Role '{roleName}' not found in system");
+                }
+            }
         }
 
         public async Task<NguoiDungDetailDto?> GetDetailByIdAsync(int id)

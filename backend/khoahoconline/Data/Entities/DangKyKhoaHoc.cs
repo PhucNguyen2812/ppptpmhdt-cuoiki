@@ -22,6 +22,9 @@ public partial class DangKyKhoaHoc
     [Column(TypeName = "datetime")]
     public DateTime? NgayDangKy { get; set; }
 
+    [Column(TypeName = "datetime")]
+    public DateTime? NgayHetHan { get; set; } // Thời hạn truy cập của học viên (ví dụ: NgayDangKy + 6 tháng hoặc 12 tháng)
+
     public bool? TrangThai { get; set; }
 
     [ForeignKey("IdDonHang")]

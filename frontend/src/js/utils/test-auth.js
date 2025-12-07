@@ -5,7 +5,6 @@
 
 import { getAccessToken, getUserFromToken } from './token.js';
 import { getUserInfo } from './authHelper.js';
-import { getAllCourseApprovals } from '../api/courseApi.js';
 
 /**
  * Test toàn bộ authentication flow
@@ -75,36 +74,7 @@ export async function testAuthFlow() {
       console.warn('⚠️  KHÔNG TÌM THẤY ROLES TRONG USER INFO!');
     }
     
-    // 6. Test API call
-    console.log('\n6. Test API Call - getAllCourseApprovals:');
-    try {
-      const response = await getAllCourseApprovals();
-      console.log('✅ API call thành công!');
-      console.log('   Response:', JSON.stringify(response, null, 2));
-      return true;
-    } catch (error) {
-      console.error('❌ API call thất bại!');
-      console.error('   Error:', error);
-      console.error('   Error message:', error.message);
-      
-      // Kiểm tra chi tiết lỗi
-      if (error.message.includes('403')) {
-        console.error('\n⚠️  LỖI 403 FORBIDDEN:');
-        console.error('   - User không có quyền truy cập endpoint này');
-        console.error('   - Cần role: QUANTRIVIEN hoặc KIEMDUYETVIEN');
-        console.error('   - Role hiện tại:', roles);
-      } else if (error.message.includes('401')) {
-        console.error('\n⚠️  LỖI 401 UNAUTHORIZED:');
-        console.error('   - Token không hợp lệ hoặc đã hết hạn');
-        console.error('   - Vui lòng đăng nhập lại');
-      } else if (error.message.includes('404')) {
-        console.error('\n⚠️  LỖI 404 NOT FOUND:');
-        console.error('   - Endpoint không tồn tại');
-        console.error('   - Kiểm tra lại route trong backend');
-      }
-      
-      return false;
-    }
+    return true;
   } catch (error) {
     console.error('❌ Lỗi khi lấy user info:', error);
     return false;
@@ -123,7 +93,7 @@ export async function testDirectApiCall() {
     return;
   }
   
-  const url = 'http://localhost:5228/api/v1/courses/approvals';
+  const url = 'http://localhost:5228/api/v1/courses';
   console.log('URL:', url);
   console.log('Token (first 50 chars):', token.substring(0, 50) + '...');
   
@@ -171,6 +141,8 @@ window.testDirectApiCall = testDirectApiCall;
 console.log('✅ Test functions đã được load. Sử dụng:');
 console.log('   - testAuthFlow() - Test toàn bộ authentication flow');
 console.log('   - testDirectApiCall() - Test API call trực tiếp');
+
+
 
 
 

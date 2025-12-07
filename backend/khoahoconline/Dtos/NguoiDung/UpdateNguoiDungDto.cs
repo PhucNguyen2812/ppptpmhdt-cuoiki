@@ -9,7 +9,10 @@ namespace khoahoconline.Dtos.NguoiDung
 
         public string Email { get; set; } = null!;
 
-        public string MatKhau { get; set; } = null!;
+        /// <summary>
+        /// Mật khẩu mới. Nếu null hoặc rỗng, mật khẩu hiện tại sẽ được giữ nguyên.
+        /// </summary>
+        public string? MatKhau { get; set; }
 
         public string? SoDienThoai { get; set; }
 
@@ -18,5 +21,12 @@ namespace khoahoconline.Dtos.NguoiDung
         public string? TieuSu { get; set; }
 
         public bool? TrangThai { get; set; }
+
+        /// <summary>
+        /// Danh sách tên vai trò (roles) cần gán cho người dùng
+        /// Không được chứa "ADMIN"
+        /// Nếu có "GIANGVIEN" thì tự động thêm "HOCVIEN"
+        /// </summary>
+        public List<string>? Roles { get; set; }
     }
 }

@@ -142,45 +142,6 @@ namespace khoahoconline.Controllers
             }
         }
 
-        /// <summary>
-        /// [ADMIN/REVIEWER] Lấy danh sách khóa học chờ duyệt
-        /// </summary>
-        [HttpGet("pending")]
-        [Authorize(Roles = "QUANTRIVIEN,KIEMDUYETVIEN,ADMIN")]
-        public async Task<IActionResult> GetPendingCourses()
-        {
-            _logger.LogInformation("Getting pending courses");
-            try
-            {
-                var result = await _khoaHocService.GetPendingCoursesAsync();
-                return Ok(ApiResponse<List<KiemDuyetKhoaHocDto>>.SuccessResponse(result));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting pending courses");
-                return BadRequest(ApiResponse<string>.ErrorResponse(ex.Message));
-            }
-        }
-
-        /// <summary>
-        /// [ADMIN/REVIEWER] Lấy tất cả khóa học với trạng thái kiểm duyệt (có thể filter theo status)
-        /// </summary>
-        [HttpGet("approvals")]
-        [Authorize(Roles = "QUANTRIVIEN,KIEMDUYETVIEN,ADMIN")]
-        public async Task<IActionResult> GetAllCourseApprovals([FromQuery] string? status = null)
-        {
-            _logger.LogInformation($"Getting all course approvals with status: {status ?? "all"}");
-            try
-            {
-                var result = await _khoaHocService.GetAllCourseApprovalsAsync(status);
-                return Ok(ApiResponse<List<KiemDuyetKhoaHocDto>>.SuccessResponse(result));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting all course approvals");
-                return BadRequest(ApiResponse<string>.ErrorResponse(ex.Message));
-            }
-        }
 
         /// <summary>
         /// [PUBLIC] Lấy chi tiết khóa học
@@ -206,63 +167,24 @@ namespace khoahoconline.Controllers
         public async Task<IActionResult> GetCurriculum(int id)
         {
             _logger.LogInformation($"Getting curriculum for course: {id}");
-            var result = await _khoaHocService.GetCurriculumAsync(id);
+            
+            // Lấy userId nếu user đã đăng nhập (để kiểm tra quyền truy cập)
+            int? userId = null;
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                try
+                {
+                    userId = GetUserId();
+                }
+                catch
+                {
+                    // Nếu không lấy được userId, để null (user chưa đăng nhập hoặc token không hợp lệ)
+                    userId = null;
+                }
+            }
+            
+            var result = await _khoaHocService.GetCurriculumAsync(id, userId);
             return Ok(ApiResponse<CurriculumDto>.SuccessResponse(result));
-        }
-
-        /// <summary>
-        /// [GIANGVIEN] Upload video giới thiệu cho khóa học
-        /// </summary>
-        /// <param name="id">ID khóa học</param>
-        /// <param name="video">File video</param>
-        /// <returns>URL của video đã upload</returns>
-        [HttpPost("{id}/upload-intro-video")]
-        [Authorize(Roles = "GIANGVIEN")]
-        public async Task<IActionResult> UploadIntroVideo(int id, IFormFile video)
-        {
-            _logger.LogInformation($"Uploading intro video for course: {id}");
-
-            if (video == null || video.Length == 0)
-            {
-                return BadRequest(ApiResponse<string>.ErrorResponse("File video không hợp lệ"));
-            }
-
-            try
-            {
-                // Kiểm tra khóa học có tồn tại không
-                var khoaHoc = await _khoaHocService.GetByIdAsync(id);
-                if (khoaHoc == null)
-                {
-                    return NotFound(ApiResponse<string>.ErrorResponse("Không tìm thấy khóa học"));
-                }
-
-                // Xóa video cũ nếu có
-                if (!string.IsNullOrEmpty(khoaHoc.VideoGioiThieu))
-                {
-                    await _videoUploadService.DeleteVideoAsync(khoaHoc.VideoGioiThieu);
-                }
-
-                // Upload video mới
-                var videoUrl = await _videoUploadService.UploadVideoAsync(video, "course-intro");
-                
-                // Cập nhật video URL vào database
-                // Lấy entity từ repository và cập nhật
-                var khoaHocEntity = await _unitOfWork.KhoaHocRepository.GetByIdAsync(id);
-                if (khoaHocEntity != null)
-                {
-                    khoaHocEntity.VideoGioiThieu = videoUrl;
-                    khoaHocEntity.NgayCapNhat = DateTime.UtcNow;
-                    await _unitOfWork.KhoaHocRepository.UpdateAsync(khoaHocEntity);
-                    await _unitOfWork.SaveChangesAsync();
-                }
-                
-                return Ok(ApiResponse<string>.SuccessResponse(videoUrl, "Upload video giới thiệu thành công"));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error uploading video for course {id}");
-                return BadRequest(ApiResponse<string>.ErrorResponse(ex.Message));
-            }
         }
 
         /// <summary>
@@ -310,7 +232,7 @@ namespace khoahoconline.Controllers
             {
                 var instructorId = GetUserId();
                 var result = await _khoaHocService.CreateCourseAsync(dto, instructorId);
-                return Ok(ApiResponse<KhoaHocDto>.SuccessResponse(result, "Tạo khóa học thành công. Khóa học đang chờ duyệt."));
+                return Ok(ApiResponse<KhoaHocDto>.SuccessResponse(result, "Tạo khóa học thành công."));
             }
             catch (Exception ex)
             {
@@ -331,7 +253,7 @@ namespace khoahoconline.Controllers
             {
                 var instructorId = GetUserId();
                 var result = await _khoaHocService.CreateCourseWithCurriculumAsync(dto, instructorId);
-                return Ok(ApiResponse<KhoaHocDto>.SuccessResponse(result, "Tạo khóa học thành công. Khóa học đang chờ duyệt."));
+                return Ok(ApiResponse<KhoaHocDto>.SuccessResponse(result, "Tạo khóa học thành công."));
             }
             catch (Exception ex)
             {
@@ -352,7 +274,7 @@ namespace khoahoconline.Controllers
             {
                 var instructorId = GetUserId();
                 var result = await _khoaHocService.UpdateCourseAsync(id, dto, instructorId);
-                return Ok(ApiResponse<KhoaHocDto>.SuccessResponse(result, "Cập nhật khóa học thành công. Khóa học đang chờ duyệt lại."));
+                return Ok(ApiResponse<KhoaHocDto>.SuccessResponse(result, "Cập nhật khóa học thành công."));
             }
             catch (Exception ex)
             {
@@ -390,29 +312,6 @@ namespace khoahoconline.Controllers
             }
         }
 
-        /// <summary>
-        /// [ADMIN/REVIEWER] Lấy khóa học với curriculum để xem (không cần ownership)
-        /// </summary>
-        [HttpGet("{id}/for-review")]
-        [Authorize(Roles = "QUANTRIVIEN,KIEMDUYETVIEN,ADMIN")]
-        public async Task<IActionResult> GetCourseForReview(int id)
-        {
-            _logger.LogInformation($"Getting course for review: {id}");
-            try
-            {
-                var result = await _khoaHocService.GetCourseForReviewAsync(id);
-                return Ok(ApiResponse<CreateCourseWithCurriculumDto>.SuccessResponse(result, "Lấy thông tin khóa học thành công"));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error getting course for review {id}");
-                if (ex is Middleware.Exceptions.NotFoundException)
-                {
-                    return NotFound(ApiResponse<string>.ErrorResponse(ex.Message));
-                }
-                return BadRequest(ApiResponse<string>.ErrorResponse(ex.Message));
-            }
-        }
 
         /// <summary>
         /// [GIANGVIEN] Cập nhật khóa học kèm chương và bài giảng
@@ -426,7 +325,7 @@ namespace khoahoconline.Controllers
             {
                 var instructorId = GetUserId();
                 var result = await _khoaHocService.UpdateCourseWithCurriculumAsync(id, dto, instructorId);
-                return Ok(ApiResponse<KhoaHocDto>.SuccessResponse(result, "Cập nhật khóa học thành công. Khóa học đang chờ duyệt lại."));
+                return Ok(ApiResponse<KhoaHocDto>.SuccessResponse(result, "Cập nhật khóa học thành công."));
             }
             catch (Exception ex)
             {
@@ -501,7 +400,7 @@ namespace khoahoconline.Controllers
             {
                 var instructorId = GetUserId();
                 var result = await _khoaHocService.UnhideCourseAsync(id, instructorId);
-                return Ok(ApiResponse<bool>.SuccessResponse(result, "Yêu cầu hiển thị lại khóa học đã được gửi. Đang chờ duyệt."));
+                return Ok(ApiResponse<bool>.SuccessResponse(result, "Hiển thị lại khóa học thành công."));
             }
             catch (Exception ex)
             {
@@ -514,134 +413,6 @@ namespace khoahoconline.Controllers
             }
         }
 
-        /// <summary>
-        /// [ADMIN/REVIEWER] Duyệt khóa học
-        /// </summary>
-        [HttpPost("{id}/approve")]
-        [Authorize(Roles = "QUANTRIVIEN,KIEMDUYETVIEN,ADMIN")]
-        public async Task<IActionResult> ApproveCourse(int id, [FromBody] ApproveCourseDto dto)
-        {
-            _logger.LogInformation($"Approving course: {id}");
-            try
-            {
-                var reviewerId = GetUserId();
-                var result = await _khoaHocService.ApproveCourseAsync(id, dto, reviewerId);
-                return Ok(ApiResponse<bool>.SuccessResponse(result, "Duyệt khóa học thành công"));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error approving course {id}");
-                if (ex is Middleware.Exceptions.NotFoundException || ex is Middleware.Exceptions.BadRequestException)
-                {
-                    return BadRequest(ApiResponse<string>.ErrorResponse(ex.Message));
-                }
-                return BadRequest(ApiResponse<string>.ErrorResponse(ex.Message));
-            }
-        }
-
-        /// <summary>
-        /// [ADMIN/REVIEWER] Từ chối khóa học
-        /// </summary>
-        [HttpPost("{id}/reject")]
-        [Authorize(Roles = "QUANTRIVIEN,KIEMDUYETVIEN,ADMIN")]
-        public async Task<IActionResult> RejectCourse(int id, [FromBody] RejectCourseDto dto)
-        {
-            _logger.LogInformation($"Rejecting course: {id}");
-            try
-            {
-                var reviewerId = GetUserId();
-                var result = await _khoaHocService.RejectCourseAsync(id, dto, reviewerId);
-                return Ok(ApiResponse<bool>.SuccessResponse(result, "Từ chối khóa học thành công"));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error rejecting course {id}");
-                if (ex is Middleware.Exceptions.NotFoundException || ex is Middleware.Exceptions.BadRequestException)
-                {
-                    return BadRequest(ApiResponse<string>.ErrorResponse(ex.Message));
-                }
-                return BadRequest(ApiResponse<string>.ErrorResponse(ex.Message));
-            }
-        }
-
-        /// <summary>
-        /// [ADMIN/REVIEWER] Ẩn khóa học
-        /// </summary>
-        [HttpPost("{id}/hide-by-admin")]
-        [Authorize(Roles = "QUANTRIVIEN,KIEMDUYETVIEN,ADMIN")]
-        public async Task<IActionResult> HideCourseByAdmin(int id, [FromBody] ApproveCourseDto dto)
-        {
-            _logger.LogInformation($"Hiding course by admin: {id}");
-            try
-            {
-                var reviewerId = GetUserId();
-                var result = await _khoaHocService.HideCourseByAdminAsync(id, dto, reviewerId);
-                return Ok(ApiResponse<bool>.SuccessResponse(result, "Ẩn khóa học thành công"));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error hiding course {id} by admin");
-                
-                // Log inner exception nếu có
-                if (ex.InnerException != null)
-                {
-                    _logger.LogError($"Inner exception: {ex.InnerException.Message}");
-                    _logger.LogError($"Inner exception stack: {ex.InnerException.StackTrace}");
-                }
-                
-                if (ex is Middleware.Exceptions.NotFoundException || ex is Middleware.Exceptions.BadRequestException)
-                {
-                    return BadRequest(ApiResponse<string>.ErrorResponse(ex.Message));
-                }
-                
-                // Trả về message chi tiết hơn
-                var errorMessage = ex.Message;
-                if (ex.InnerException != null)
-                {
-                    errorMessage += $" Chi tiết: {ex.InnerException.Message}";
-                }
-                
-                return BadRequest(ApiResponse<string>.ErrorResponse(errorMessage));
-            }
-        }
-
-        /// <summary>
-        /// [ADMIN/REVIEWER] Bỏ ẩn khóa học
-        /// </summary>
-        [HttpPost("{id}/unhide-by-admin")]
-        [Authorize(Roles = "QUANTRIVIEN,KIEMDUYETVIEN,ADMIN")]
-        public async Task<IActionResult> UnhideCourseByAdmin(int id, [FromBody] ApproveCourseDto dto)
-        {
-            _logger.LogInformation($"Unhiding course by admin: {id}");
-            try
-            {
-                var reviewerId = GetUserId();
-                var result = await _khoaHocService.UnhideCourseByAdminAsync(id, dto, reviewerId);
-                return Ok(ApiResponse<bool>.SuccessResponse(result, "Bỏ ẩn khóa học thành công"));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error unhiding course {id} by admin");
-                
-                if (ex.InnerException != null)
-                {
-                    _logger.LogError($"Inner exception: {ex.InnerException.Message}");
-                }
-                
-                if (ex is Middleware.Exceptions.NotFoundException || ex is Middleware.Exceptions.BadRequestException)
-                {
-                    return BadRequest(ApiResponse<string>.ErrorResponse(ex.Message));
-                }
-                
-                var errorMessage = ex.Message;
-                if (ex.InnerException != null)
-                {
-                    errorMessage += $" Chi tiết: {ex.InnerException.Message}";
-                }
-                
-                return BadRequest(ApiResponse<string>.ErrorResponse(errorMessage));
-            }
-        }
 
         private int GetUserId()
         {

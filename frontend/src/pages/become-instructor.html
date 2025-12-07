@@ -50,6 +50,41 @@
             color: #28a745;
             font-weight: bold;
         }
+        .form-label {
+            color: #333;
+        }
+        .request-status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        #filePreview img {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        #filePreview .file-info {
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body class="login-page">
@@ -72,14 +107,56 @@
 
         <div id="alertMessage" class="login__alert"></div>
 
-        <div style="text-align: center;">
-            <button type="button" class="login__button" id="registerInstructorBtn" style="width: 100%;">
-                <span class="login__button-text--default">Đăng ký làm giảng viên</span>
-                <span class="login__button-text--loading">
-                    <span class="login__spinner"></span> Đang xử lý...
-                </span> 
-            </button>
+        <!-- Request Status Section (shown if user has pending/approved/rejected request) -->
+        <div id="requestStatusSection" style="display: none;">
+            <div class="request-status-card" style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+                <h3 style="color: #667eea; margin-bottom: 15px;">Trạng thái yêu cầu</h3>
+                <div id="requestStatusContent"></div>
+            </div>
         </div>
+
+        <!-- Request Form Section -->
+        <form id="instructorRequestForm" style="display: none;">
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label for="chungChiFile" class="form-label" style="display: block; margin-bottom: 8px; font-weight: 500;">
+                    Chứng chỉ <span style="color: red;">*</span>
+                </label>
+                <input 
+                    type="file" 
+                    id="chungChiFile" 
+                    name="chungChiFile" 
+                    accept="image/*,.pdf,.doc,.docx"
+                    required
+                    style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;"
+                />
+                <small style="color: #666; display: block; margin-top: 5px;">
+                    Chấp nhận: Ảnh (JPG, PNG) hoặc tài liệu (PDF, DOC, DOCX). Tối đa 10MB.
+                </small>
+                <div id="filePreview" style="margin-top: 10px;"></div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label for="thongTinBoSung" class="form-label" style="display: block; margin-bottom: 8px; font-weight: 500;">
+                    Thông tin bổ sung (tùy chọn)
+                </label>
+                <textarea 
+                    id="thongTinBoSung" 
+                    name="thongTinBoSung" 
+                    rows="4"
+                    placeholder="Vui lòng cung cấp thêm thông tin về kinh nghiệm giảng dạy, chuyên môn, hoặc bất kỳ thông tin nào bạn muốn chia sẻ..."
+                    style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; font-family: inherit; resize: vertical;"
+                ></textarea>
+            </div>
+
+            <div style="text-align: center;">
+                <button type="submit" class="login__button" id="submitRequestBtn" style="width: 100%;">
+                    <span class="login__button-text--default">Gửi yêu cầu</span>
+                    <span class="login__button-text--loading">
+                        <span class="login__spinner"></span> Đang gửi...
+                    </span> 
+                </button>
+            </div>
+        </form>
 
         <footer class="login__footer">
             <a href="index.html" class="login__link">← Quay lại trang chủ</a>

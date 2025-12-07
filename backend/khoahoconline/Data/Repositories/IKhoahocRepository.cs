@@ -1,6 +1,8 @@
 using khoahoconline.Data.Entities;
 using khoahoconline.Dtos.KhoaHoc;
 using khoahoconline.Dtos;
+using Chuong = khoahoconline.Data.Entities.Chuong;
+using BaiGiang = khoahoconline.Data.Entities.BaiGiang;
 
 namespace khoahoconline.Data.Repositories
 {
@@ -60,5 +62,15 @@ namespace khoahoconline.Data.Repositories
         /// Đếm tổng số bài giảng
         /// </summary>
         Task<int> CountLecturesAsync(int courseId);
+
+        /// <summary>
+        /// Lấy danh sách chương của khóa học
+        /// </summary>
+        Task<List<khoahoconline.Data.Entities.Chuong>> GetChuongsByKhoaHocIdAsync(int courseId);
+
+        /// <summary>
+        /// Lấy danh sách bài giảng của chương
+        /// </summary>
+        Task<List<khoahoconline.Data.Entities.BaiGiang>> GetBaiGiangsByChuongIdAsync(int chuongId);
     }
 }

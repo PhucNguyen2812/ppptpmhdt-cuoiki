@@ -1,0 +1,257 @@
+### Backend API Tests
+### Test các chức năng đã thực hiện
+
+@baseUrl = https://localhost:7000
+@token = YOUR_ACCESS_TOKEN_HERE
+@instructorToken = YOUR_INSTRUCTOR_TOKEN_HERE
+@adminToken = YOUR_ADMIN_TOKEN_HERE
+
+### ============================================
+### 1. TEST ĐĂNG KÝ LÀM GIẢNG VIÊN
+### ============================================
+
+### 1.1. Gửi yêu cầu đăng ký làm giảng viên (HOCVIEN)
+POST {{baseUrl}}/api/v1/instructor-requests
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="chungChi"; filename="chungchi.pdf"
+Content-Type: application/pdf
+
+< ./test-files/chungchi.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="thongTinBoSung"
+
+Kinh nghiệm giảng dạy 5 năm, chuyên về lập trình web
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 1.2. Lấy yêu cầu của mình (HOCVIEN)
+GET {{baseUrl}}/api/v1/instructor-requests/my-request
+Authorization: Bearer {{token}}
+
+### 1.3. Lấy danh sách yêu cầu (KIEMDUYETVIEN/ADMIN)
+GET {{baseUrl}}/api/v1/instructor-requests?trangThai=Chờ duyệt&pageNumber=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+### 1.4. Lấy chi tiết yêu cầu (KIEMDUYETVIEN/ADMIN)
+GET {{baseUrl}}/api/v1/instructor-requests/1
+Authorization: Bearer {{adminToken}}
+
+### 1.5. Duyệt yêu cầu (KIEMDUYETVIEN/ADMIN)
+POST {{baseUrl}}/api/v1/instructor-requests/1/approve
+Authorization: Bearer {{adminToken}}
+
+### 1.6. Từ chối yêu cầu (KIEMDUYETVIEN/ADMIN)
+POST {{baseUrl}}/api/v1/instructor-requests/1/reject
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "lyDoTuChoi": "Chứng chỉ không đủ điều kiện"
+}
+
+### ============================================
+### 2. TEST TẠO KHÓA HỌC
+### ============================================
+
+### 2.1. Tạo khóa học mới (GIANGVIEN) - Publish ngay
+POST {{baseUrl}}/api/v1/courses
+Authorization: Bearer {{instructorToken}}
+Content-Type: application/json
+
+{
+  "tenKhoaHoc": "Lập trình C# từ cơ bản đến nâng cao",
+  "moTaNgan": "Khóa học lập trình C# toàn diện",
+  "moTaChiTiet": "Khóa học này sẽ dạy bạn từ cơ bản đến nâng cao về C#",
+  "idDanhMuc": 1,
+  "giaBan": 500000,
+  "mucDo": "Cơ bản",
+  "yeuCauTruoc": "Không cần kiến thức trước",
+  "hocDuoc": "Lập trình C#, OOP, ASP.NET Core",
+  "publish": true,
+  "chuongs": [
+    {
+      "tenChuong": "Giới thiệu về C#",
+      "moTa": "Chương này giới thiệu về ngôn ngữ C#",
+      "baiGiangs": [
+        {
+          "tieuDe": "Cài đặt môi trường",
+          "moTa": "Hướng dẫn cài đặt Visual Studio",
+          "duongDanVideo": "https://example.com/video1.mp4",
+          "thoiLuong": 1800,
+          "mienPhiXem": true
+        },
+        {
+          "tieuDe": "Hello World đầu tiên",
+          "moTa": "Viết chương trình Hello World",
+          "duongDanVideo": "https://example.com/video2.mp4",
+          "thoiLuong": 1200,
+          "mienPhiXem": false
+        }
+      ]
+    },
+    {
+      "tenChuong": "Biến và Kiểu dữ liệu",
+      "moTa": "Tìm hiểu về biến và các kiểu dữ liệu trong C#",
+      "baiGiangs": [
+        {
+          "tieuDe": "Khai báo biến",
+          "moTa": "Cách khai báo và sử dụng biến",
+          "duongDanVideo": "https://example.com/video3.mp4",
+          "thoiLuong": 1500,
+          "mienPhiXem": false
+        }
+      ]
+    }
+  ]
+}
+
+### 2.2. Tạo khóa học mới (GIANGVIEN) - Lưu nháp
+POST {{baseUrl}}/api/v1/courses
+Authorization: Bearer {{instructorToken}}
+Content-Type: application/json
+
+{
+  "tenKhoaHoc": "Khóa học nháp",
+  "moTaNgan": "Khóa học đang soạn",
+  "idDanhMuc": 1,
+  "giaBan": 300000,
+  "mucDo": "Trung bình",
+  "publish": false,
+  "chuongs": []
+}
+
+### ============================================
+### 3. TEST CHỈNH SỬA KHÓA HỌC
+### ============================================
+
+### 3.1. Lấy thông tin khóa học để chỉnh sửa (GIANGVIEN)
+GET {{baseUrl}}/api/v1/courses/1/edit
+Authorization: Bearer {{instructorToken}}
+
+### 3.2. Cập nhật khóa học (GIANGVIEN)
+PUT {{baseUrl}}/api/v1/courses/1
+Authorization: Bearer {{instructorToken}}
+Content-Type: application/json
+
+{
+  "tenKhoaHoc": "Lập trình C# từ cơ bản đến nâng cao - Updated",
+  "moTaNgan": "Khóa học lập trình C# toàn diện - Updated",
+  "moTaChiTiet": "Khóa học này sẽ dạy bạn từ cơ bản đến nâng cao về C# - Updated",
+  "giaBan": 600000,
+  "mucDo": "Trung bình",
+  "yeuCauTruoc": "Có kiến thức cơ bản về lập trình",
+  "hocDuoc": "Lập trình C#, OOP, ASP.NET Core, Entity Framework",
+  "chuongs": [
+    {
+      "tenChuong": "Giới thiệu về C# - Updated",
+      "moTa": "Chương này giới thiệu về ngôn ngữ C# - Updated",
+      "baiGiangs": [
+        {
+          "tieuDe": "Cài đặt môi trường - Updated",
+          "moTa": "Hướng dẫn cài đặt Visual Studio - Updated",
+          "duongDanVideo": "https://example.com/video1-updated.mp4",
+          "thoiLuong": 2000,
+          "mienPhiXem": true
+        }
+      ]
+    }
+  ]
+}
+
+### ============================================
+### 4. TEST XÓA KHÓA HỌC
+### ============================================
+
+### 4.1. Xóa khóa học (GIANGVIEN) - Không có học viên đăng ký
+DELETE {{baseUrl}}/api/v1/courses/1
+Authorization: Bearer {{instructorToken}}
+
+### 4.2. Xóa khóa học (GIANGVIEN) - Có học viên đăng ký (sẽ fail)
+DELETE {{baseUrl}}/api/v1/courses/2
+Authorization: Bearer {{instructorToken}}
+
+### ============================================
+### 5. TEST THANH TOÁN
+### ============================================
+
+### 5.1. Tạo đơn hàng (HOCVIEN)
+POST {{baseUrl}}/api/v1/payments/orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "courseIds": [1, 2],
+  "voucherCode": null
+}
+
+### 5.2. Tạo đơn hàng với voucher (HOCVIEN)
+POST {{baseUrl}}/api/v1/payments/orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "courseIds": [1],
+  "voucherCode": "DISCOUNT10"
+}
+
+### 5.3. Tạo Payment Intent (HOCVIEN)
+POST {{baseUrl}}/api/v1/payments/payment-intent
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "orderId": 1
+}
+
+### 5.4. Xác nhận thanh toán thành công (HOCVIEN)
+POST {{baseUrl}}/api/v1/payments/confirm-payment
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "paymentIntentId": "pi_test_1234567890"
+}
+
+### 5.5. Lấy thông tin đơn hàng (HOCVIEN)
+GET {{baseUrl}}/api/v1/payments/orders/1
+Authorization: Bearer {{token}}
+
+### 5.6. Lấy danh sách đơn hàng của user (HOCVIEN)
+GET {{baseUrl}}/api/v1/payments/orders
+Authorization: Bearer {{token}}
+
+### ============================================
+### 6. TEST VALIDATION
+### ============================================
+
+### 6.1. Tạo đơn hàng với khóa học đã hết hạn (sẽ fail)
+POST {{baseUrl}}/api/v1/payments/orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "courseIds": [999]
+}
+
+### 6.2. Tạo đơn hàng với khóa học đã đăng ký (sẽ fail)
+POST {{baseUrl}}/api/v1/payments/orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "courseIds": [1]
+}
+
+### 6.3. Xóa khóa học không thuộc về mình (sẽ fail)
+DELETE {{baseUrl}}/api/v1/courses/999
+Authorization: Bearer {{instructorToken}}
+
+
+
+
+
+
+
+

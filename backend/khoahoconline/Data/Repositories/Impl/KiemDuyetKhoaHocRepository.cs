@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using khoahoconline.Data.Entities;
+using khoahoconline.Dtos;
 
 namespace khoahoconline.Data.Repositories.Impl
 {
@@ -9,78 +10,79 @@ namespace khoahoconline.Data.Repositories.Impl
         {
         }
 
-        public async Task<KiemDuyetKhoaHoc?> GetLatestByCourseIdAsync(int courseId)
+        public async Task<PagedResult<KiemDuyetKhoaHoc>> GetPagedAsync(string? trangThai = null, int pageNumber = 1, int pageSize = 10)
         {
-            return await _dbSet
+            var query = _dbSet
+                .AsNoTracking()
                 .Include(k => k.IdKhoaHocNavigation)
+                    .ThenInclude(k => k!.IdGiangVienNavigation)
                 .Include(k => k.IdNguoiGuiNavigation)
-                .Include(k => k.IdNguoiKiemDuyetNavigation)
-                .Where(k => k.IdKhoaHoc == courseId)
-                .OrderByDescending(k => k.PhienBan)
-                .ThenByDescending(k => k.NgayGui)
-                .FirstOrDefaultAsync();
-        }
+                .Include(k => k.IdNguoiDuyetNavigation)
+                .AsQueryable();
 
-        public async Task<KiemDuyetKhoaHoc?> GetByCourseIdAndVersionAsync(int courseId, int version)
-        {
-            return await _dbSet
-                .Include(k => k.IdKhoaHocNavigation)
-                .Include(k => k.IdNguoiGuiNavigation)
-                .Include(k => k.IdNguoiKiemDuyetNavigation)
-                .FirstOrDefaultAsync(k => k.IdKhoaHoc == courseId && k.PhienBan == version);
-        }
-
-        public async Task<List<KiemDuyetKhoaHoc>> GetPendingApprovalsAsync()
-        {
-            return await _dbSet
-                .Include(k => k.IdKhoaHocNavigation)
-                    .ThenInclude(k => k.IdDanhMucNavigation)
-                .Include(k => k.IdKhoaHocNavigation)
-                    .ThenInclude(k => k.IdGiangVienNavigation)
-                .Include(k => k.IdNguoiGuiNavigation)
-                .Where(k => k.TrangThaiKiemDuyet == Helpers.KiemDuyetConstants.ChoKiemDuyet)
-                .OrderByDescending(k => k.NgayGui)
-                .ToListAsync();
-        }
-
-        public async Task<bool> IsCoursePendingAsync(int courseId)
-        {
-            var latest = await GetLatestByCourseIdAsync(courseId);
-            return latest != null && latest.TrangThaiKiemDuyet == Helpers.KiemDuyetConstants.ChoKiemDuyet;
-        }
-
-        public async Task<List<KiemDuyetKhoaHoc>> GetAllApprovalsAsync(string? status = null)
-        {
-            // Lấy tất cả các bản kiểm duyệt
-            var allApprovals = await _dbSet
-                .Include(k => k.IdKhoaHocNavigation)
-                    .ThenInclude(k => k.IdDanhMucNavigation)
-                .Include(k => k.IdKhoaHocNavigation)
-                    .ThenInclude(k => k.IdGiangVienNavigation)
-                .Include(k => k.IdNguoiGuiNavigation)
-                .Include(k => k.IdNguoiKiemDuyetNavigation)
-                .ToListAsync();
-
-            // Lấy bản mới nhất của mỗi khóa học (theo PhienBan và NgayGui)
-            var latestApprovals = allApprovals
-                .GroupBy(kd => kd.IdKhoaHoc)
-                .Select(g => g.OrderByDescending(kd => kd.PhienBan).ThenByDescending(kd => kd.NgayGui).First())
-                .ToList();
-
-            // Filter theo trạng thái nếu có
-            if (!string.IsNullOrWhiteSpace(status))
+            // Filter by status
+            if (!string.IsNullOrWhiteSpace(trangThai))
             {
-                latestApprovals = latestApprovals
-                    .Where(kd => kd.TrangThaiKiemDuyet == status)
-                    .ToList();
+                query = query.Where(k => k.TrangThai == trangThai);
             }
 
-            // Sắp xếp theo ngày gửi mới nhất
-            return latestApprovals
+            // Order by NgayGui descending
+            query = query.OrderByDescending(k => k.NgayGui);
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return new PagedResult<KiemDuyetKhoaHoc>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+        }
+
+        public async Task<KiemDuyetKhoaHoc?> GetByIdWithDetailsAsync(int id)
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Include(k => k.IdKhoaHocNavigation)
+                    .ThenInclude(k => k!.IdGiangVienNavigation)
+                .Include(k => k.IdKhoaHocNavigation)
+                    .ThenInclude(k => k!.IdDanhMucNavigation)
+                .Include(k => k.IdKhoaHocNavigation)
+                    .ThenInclude(k => k!.Chuongs)
+                        .ThenInclude(c => c.BaiGiangs)
+                .Include(k => k.IdNguoiGuiNavigation)
+                .Include(k => k.IdNguoiDuyetNavigation)
+                .FirstOrDefaultAsync(k => k.Id == id);
+        }
+
+        public async Task<KiemDuyetKhoaHoc?> GetByKhoaHocIdAsync(int khoaHocId)
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Include(k => k.IdKhoaHocNavigation)
+                .Include(k => k.IdNguoiGuiNavigation)
+                .Include(k => k.IdNguoiDuyetNavigation)
                 .OrderByDescending(k => k.NgayGui)
-                .ToList();
+                .FirstOrDefaultAsync(k => k.IdKhoaHoc == khoaHocId);
+        }
+
+        public async Task<bool> HasPendingRequestAsync(int khoaHocId)
+        {
+            return await _dbSet
+                .AnyAsync(k => k.IdKhoaHoc == khoaHocId && k.TrangThai == "Chờ duyệt");
         }
     }
 }
+
+
+
+
+
+
 
 

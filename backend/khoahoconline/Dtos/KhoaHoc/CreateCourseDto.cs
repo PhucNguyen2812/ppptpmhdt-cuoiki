@@ -25,14 +25,14 @@ namespace khoahoconline.Dtos.KhoaHoc
         [StringLength(500, ErrorMessage = "Hình đại diện không được vượt quá 500 ký tự")]
         public string? HinhDaiDien { get; set; }
 
-        [StringLength(500, ErrorMessage = "Video giới thiệu không được vượt quá 500 ký tự")]
-        public string? VideoGioiThieu { get; set; }
-
         public string? YeuCauTruoc { get; set; }
 
         public string? HocDuoc { get; set; }
     }
 }
+
+
+
 
 
 

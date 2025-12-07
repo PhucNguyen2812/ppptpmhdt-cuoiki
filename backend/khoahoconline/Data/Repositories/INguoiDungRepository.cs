@@ -13,6 +13,8 @@ namespace khoahoconline.Data.Repositories
         Task<NguoiDung?> GetByIdWithRolesAsync(int id);
         Task<bool> HasRoleAsync(int userId, string roleName);
         Task AddRoleToUserAsync(int userId, int roleId);
+        Task RemoveRoleFromUserAsync(int userId, int roleId);
+        Task RemoveAllRolesFromUserAsync(int userId);
         Task<List<string>> GetUserRolesAsync(int userId);
     }
 }

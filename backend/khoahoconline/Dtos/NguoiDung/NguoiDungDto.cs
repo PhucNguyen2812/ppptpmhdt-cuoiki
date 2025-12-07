@@ -22,5 +22,7 @@ namespace khoahoconline.Dtos.NguoiDung
         public DateTime? NgayTao { get; set; }
 
         public DateTime? NgayCapNhat { get; set; }
+
+        public List<string>? VaiTros { get; set; }
     }
 }

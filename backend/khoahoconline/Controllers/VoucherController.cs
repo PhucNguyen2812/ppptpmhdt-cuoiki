@@ -32,9 +32,16 @@ public class VoucherController : ControllerBase
         
         var result = await _voucherService.ValidateVoucherAsync(dto.Code, dto.CourseIds);
         
-        return Ok(ApiResponse<VoucherDto>.SuccessResponse(result, result.IsValid ? "Mã voucher hợp lệ" : result.Message));
+        return Ok(ApiResponse<VoucherDto>.SuccessResponse(result, result.IsValid ? "Mã voucher hợp lệ" : result.Message ?? "Mã voucher không hợp lệ"));
     }
 }
+
+
+
+
+
+
+
 
 
 

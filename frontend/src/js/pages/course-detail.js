@@ -3,49 +3,18 @@ import { addToCart } from '../api/cartApi.js';
 import { formatPrice, getStars, formatTotalDuration, formatRatingCount, formatStudentCount } from '../utils/courseHelper.js';
 import { API_BASE_URL, DEFAULT_IMAGES } from '../config.js';
 import { getAccessToken } from '../utils/token.js';
+import { initNotificationComponent } from '../components/NotificationComponent.js';
+import { 
+    getReviewsByCourseId, 
+    getCourseReviewSummary, 
+    getMyReview 
+} from '../api/reviewApi.js';
+import { showReviewFormModal } from '../components/ReviewFormModal.js';
+import { requireAuth } from '../api/authApi.js';
 
 // Get course ID from URL
 const urlParams = new URLSearchParams(window.location.search);
 const courseId = urlParams.get('id');
-
-// Mock reviews data (will be replaced with API call when available)
-const mockReviews = [
-    {
-        id: 1,
-        idHocVien: 1,
-        tenHocVien: 'Laura M.',
-        anhDaiDien: null,
-        diemDanhGia: 5,
-        binhLuan: 'This course was in-depth, informative, and entertaining. I like how it considered AI use for every area of life. I was almost done before the course was upgraded to include the 3 paths. That\'s a great idea. I appreciate the updates so that I can follow-up and update my knowledge in the future.',
-        ngayDanhGia: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    },
-    {
-        id: 2,
-        idHocVien: 2,
-        tenHocVien: 'Saniya',
-        anhDaiDien: null,
-        diemDanhGia: 5,
-        binhLuan: 'This course is an excellent introduction to AI and ChatGPT! The lessons are clear, practical, and easy to follow. I learned a lot about generative AI and how to apply it in real life - highly recommended for anyone curious about modern AI tools.',
-        ngayDanhGia: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000)
-    },
-    {
-        id: 3,
-        idHocVien: 3,
-        tenHocVien: 'Melissa M.',
-        anhDaiDien: null,
-        diemDanhGia: 5,
-        binhLuan: 'The course is well-structured and presents information in a clear, accessible manner, making it easy to follow. However, for individuals with no prior background in AI, certain sections may feel overly complex or fast paced. While I\'ve gained valuable insights, I believe the learning experience could be enhanced by offering smaller, topic-specific modules that focus more on foundational concepts. A greater emphasis on beginner-level material would make the course more approachable for newcomers.',
-        ngayDanhGia: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    },
-    {
-        id: 4,
-        idHocVien: 4,
-        tenHocVien: 'Rishiraj S.',
-        anhDaiDien: null,
-        diemDanhGia: 5,
-        binhLuan: 'It was a very good course for an introduction to various AI tools. Not too related to my work but was a good opportunity to figure out what you can do with various AI tools.',
-        ngayDanhGia: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    },
     {
         id: 5,
         idHocVien: 5,
@@ -403,119 +372,241 @@ function renderInstructor(course) {
     document.getElementById('instructorNameForCourses').textContent = instructor.hoTen || 'Giảng viên';
 }
 
-// Load reviews
-function loadReviews(course) {
-    // Sort reviews by date (newest first)
-    const sortedReviews = [...mockReviews].sort((a, b) => new Date(b.ngayDanhGia) - new Date(a.ngayDanhGia));
-    
-    // Show first 4 reviews
-    const displayedReviews = sortedReviews.slice(0, 4);
-    
-    // Render reviews summary
-    const avgRating = course.diemDanhGia || 4.5;
-    const totalReviews = course.soLuongDanhGia || mockReviews.length;
-    
-    document.getElementById('reviewsSummary').innerHTML = `
-        <div class="reviews-summary-rating">${avgRating.toFixed(1)}</div>
-        <div>
-            <div class="reviews-summary-stars">${getStars(avgRating)}</div>
-            <div class="reviews-summary-count">${formatRatingCount(totalReviews)}</div>
-        </div>
-    `;
-    
-    // Render reviews list
-    const reviewsContainer = document.getElementById('reviewsList');
-    reviewsContainer.innerHTML = displayedReviews.map(review => `
-        <div class="review-card">
-            <div class="review-header">
-                <div class="review-avatar">${getInitials(review.tenHocVien)}</div>
-                <div class="review-info">
-                    <div class="review-name">${review.tenHocVien}</div>
-                    <div class="review-rating">${getStars(review.diemDanhGia)}</div>
-                    <div class="review-date">${formatRelativeDate(review.ngayDanhGia)}</div>
+// Load reviews from API
+async function loadReviews(course) {
+    try {
+        // Load review summary
+        const summary = await getCourseReviewSummary(courseId);
+        const avgRating = summary.diemTrungBinh || 0;
+        const totalReviews = summary.tongSoDanhGia || 0;
+        
+        // Render reviews summary
+        document.getElementById('reviewsSummary').innerHTML = `
+            <div class="reviews-summary-rating">${avgRating.toFixed(1)}</div>
+            <div>
+                <div class="reviews-summary-stars">${getStars(avgRating)}</div>
+                <div class="reviews-summary-count">${formatRatingCount(totalReviews)}</div>
+            </div>
+        `;
+        
+        // Load first page of reviews
+        const reviewsResponse = await getReviewsByCourseId(courseId, null, 1, 4);
+        const reviews = reviewsResponse.items || [];
+        
+        // Check if user has reviewed
+        let myReview = null;
+        try {
+            requireAuth(); // Check if logged in
+            myReview = await getMyReview(courseId);
+        } catch (e) {
+            // User not logged in or not enrolled
+        }
+        
+        // Render reviews list
+        const reviewsContainer = document.getElementById('reviewsList');
+        
+        // Add "Add Review" button if user is logged in and enrolled but hasn't reviewed
+        let addReviewButton = '';
+        if (myReview === null) {
+            try {
+                requireAuth();
+                // Check if user is enrolled (you might need to check this from course data)
+                addReviewButton = `
+                    <button class="btn-add-review" id="addReviewBtn">
+                        <i class="fas fa-star"></i> Đánh giá khóa học này
+                    </button>
+                `;
+            } catch (e) {
+                // Not logged in
+            }
+        } else {
+            // User has reviewed, show edit button
+            addReviewButton = `
+                <button class="btn-edit-review" id="editReviewBtn">
+                    <i class="fas fa-edit"></i> Chỉnh sửa đánh giá của tôi
+                </button>
+            `;
+        }
+        
+        if (reviews.length === 0) {
+            reviewsContainer.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    <p>Chưa có đánh giá nào cho khóa học này.</p>
+                    ${addReviewButton}
                 </div>
+            `;
+        } else {
+            reviewsContainer.innerHTML = reviews.map(review => `
+                <div class="review-card">
+                    <div class="review-header">
+                        <div class="review-avatar">
+                            ${review.anhDaiDien 
+                                ? `<img src="${review.anhDaiDien}" alt="${review.hoTenHocVien}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+                                : ''
+                            }
+                            <div style="display: ${review.anhDaiDien ? 'none' : 'flex'}; width: 48px; height: 48px; border-radius: 50%; background: var(--primary-color); color: white; align-items: center; justify-content: center; font-weight: 600;">
+                                ${getInitials(review.hoTenHocVien)}
+                            </div>
+                        </div>
+                        <div class="review-info">
+                            <div class="review-name">${review.hoTenHocVien}</div>
+                            <div class="review-rating">${getStars(review.diemDanhGia)}</div>
+                            <div class="review-date">${formatRelativeDate(review.ngayDanhGia)}</div>
+                        </div>
+                    </div>
+                    ${review.binhLuan ? `<div class="review-text">${review.binhLuan}</div>` : ''}
+                </div>
+            `).join('') + addReviewButton;
+        }
+        
+        // Store data for modal
+        window.allReviews = reviews;
+        window.reviewSummary = summary;
+        window.myReview = myReview;
+        window.courseRating = avgRating;
+        window.totalReviewsCount = totalReviews;
+        
+        // Show "Show all reviews" button if there are more reviews
+        const showAllBtn = document.getElementById('showAllReviewsBtn');
+        if (showAllBtn) {
+            if (totalReviews > 4) {
+                showAllBtn.style.display = 'block';
+            } else {
+                showAllBtn.style.display = 'none';
+            }
+        }
+        
+        // Attach event listeners for review buttons
+        const addReviewBtn = document.getElementById('addReviewBtn');
+        const editReviewBtn = document.getElementById('editReviewBtn');
+        
+        if (addReviewBtn) {
+            addReviewBtn.addEventListener('click', () => {
+                showReviewFormModal(courseId, () => {
+                    // Reload reviews after submission
+                    loadReviews(course);
+                });
+            });
+        }
+        
+        if (editReviewBtn) {
+            editReviewBtn.addEventListener('click', () => {
+                showReviewFormModal(courseId, () => {
+                    // Reload reviews after update
+                    loadReviews(course);
+                });
+            });
+        }
+        
+    } catch (error) {
+        console.error('Error loading reviews:', error);
+        document.getElementById('reviewsSummary').innerHTML = `
+            <div class="reviews-summary-rating">0.0</div>
+            <div>
+                <div class="reviews-summary-stars">${getStars(0)}</div>
+                <div class="reviews-summary-count">Chưa có đánh giá</div>
             </div>
-            <div class="review-text">${review.binhLuan}</div>
-            <div class="review-helpful">
-                <span class="review-helpful-text">Bạn thấy hữu ích?</span>
-                <button class="review-helpful-btn">
-                    <i class="fas fa-thumbs-up"></i>
-                </button>
-                <button class="review-helpful-btn">
-                    <i class="fas fa-thumbs-down"></i>
-                </button>
+        `;
+        document.getElementById('reviewsList').innerHTML = `
+            <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                <p>Không thể tải đánh giá. Vui lòng thử lại sau.</p>
             </div>
-        </div>
-    `).join('');
-    
-    // Store all reviews for modal
-    window.allReviews = sortedReviews;
-    window.courseRating = avgRating;
-    window.totalReviewsCount = totalReviews;
+        `;
+    }
 }
 
 // Show all reviews modal
-function showAllReviewsModal() {
+async function showAllReviewsModal() {
     const modal = document.getElementById('reviewsModal');
     modal.classList.add('active');
     
-    // Render rating breakdown
-    const breakdown = calculateRatingBreakdown(window.allReviews);
-    const breakdownContainer = document.getElementById('ratingBreakdown');
-    breakdownContainer.innerHTML = `
-        <h3>Phân tích đánh giá</h3>
-        ${[5, 4, 3, 2, 1].map(rating => {
-            const count = breakdown[rating] || 0;
-            const percent = window.allReviews.length > 0 ? (count / window.allReviews.length) * 100 : 0;
-            return `
-                <div class="rating-item">
-                    <div class="rating-item-stars">${getStars(rating)}</div>
-                    <div class="rating-item-bar">
-                        <div class="rating-item-bar-fill" style="width: ${percent}%"></div>
+    try {
+        // Load all reviews
+        const reviewsResponse = await getReviewsByCourseId(courseId, null, 1, 100);
+        const allReviews = reviewsResponse.items || [];
+        const summary = window.reviewSummary || await getCourseReviewSummary(courseId);
+        
+        // Render rating breakdown from summary
+        const breakdownContainer = document.getElementById('ratingBreakdown');
+        const totalReviews = summary.tongSoDanhGia || 0;
+        
+        breakdownContainer.innerHTML = `
+            <h3>Phân tích đánh giá</h3>
+            ${[5, 4, 3, 2, 1].map(rating => {
+                const count = summary[`soDanhGia${rating}Sao`] || 0;
+                const percent = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
+                return `
+                    <div class="rating-item">
+                        <div class="rating-item-stars">${getStars(rating)}</div>
+                        <div class="rating-item-bar">
+                            <div class="rating-item-bar-fill" style="width: ${percent}%"></div>
+                        </div>
+                        <div class="rating-item-percent">${Math.round(percent)}%</div>
                     </div>
-                    <div class="rating-item-percent">${Math.round(percent)}%</div>
+                `;
+            }).join('')}
+        `;
+        
+        // Render all reviews
+        const allReviewsContainer = document.getElementById('allReviewsList');
+        if (allReviews.length === 0) {
+            allReviewsContainer.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    <p>Chưa có đánh giá nào.</p>
                 </div>
             `;
-        }).join('')}
-    `;
-    
-    // Render all reviews
-    const allReviewsContainer = document.getElementById('allReviewsList');
-    allReviewsContainer.innerHTML = window.allReviews.map(review => `
-        <div class="review-card">
-            <div class="review-header">
-                <div class="review-avatar">${getInitials(review.tenHocVien)}</div>
-                <div class="review-info">
-                    <div class="review-name">${review.tenHocVien}</div>
-                    <div class="review-rating">${getStars(review.diemDanhGia)}</div>
-                    <div class="review-date">${formatRelativeDate(review.ngayDanhGia)}</div>
+        } else {
+            allReviewsContainer.innerHTML = allReviews.map(review => `
+                <div class="review-card">
+                    <div class="review-header">
+                        <div class="review-avatar">
+                            ${review.anhDaiDien 
+                                ? `<img src="${review.anhDaiDien}" alt="${review.hoTenHocVien}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+                                : ''
+                            }
+                            <div style="display: ${review.anhDaiDien ? 'none' : 'flex'}; width: 48px; height: 48px; border-radius: 50%; background: var(--primary-color); color: white; align-items: center; justify-content: center; font-weight: 600;">
+                                ${getInitials(review.hoTenHocVien)}
+                            </div>
+                        </div>
+                        <div class="review-info">
+                            <div class="review-name">${review.hoTenHocVien}</div>
+                            <div class="review-rating">${getStars(review.diemDanhGia)}</div>
+                            <div class="review-date">${formatRelativeDate(review.ngayDanhGia)}</div>
+                        </div>
+                    </div>
+                    ${review.binhLuan ? `<div class="review-text">${review.binhLuan}</div>` : ''}
                 </div>
+            `).join('');
+        }
+        
+        // Update modal header
+        document.getElementById('modalRatingText').textContent = `${summary.diemTrungBinh.toFixed(1)} xếp hạng khóa học`;
+        document.getElementById('modalRatingCount').textContent = ` • ${formatRatingCount(totalReviews)}`;
+        
+    } catch (error) {
+        console.error('Error loading all reviews:', error);
+        document.getElementById('allReviewsList').innerHTML = `
+            <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                <p>Không thể tải đánh giá. Vui lòng thử lại sau.</p>
             </div>
-            <div class="review-text">${review.binhLuan}</div>
-            <div class="review-helpful">
-                <span class="review-helpful-text">Bạn thấy hữu ích?</span>
-                <button class="review-helpful-btn">
-                    <i class="fas fa-thumbs-up"></i>
-                </button>
-                <button class="review-helpful-btn">
-                    <i class="fas fa-thumbs-down"></i>
-                </button>
-            </div>
-        </div>
-    `).join('');
-    
-    // Update modal header
-    document.getElementById('modalRatingText').textContent = `${window.courseRating.toFixed(1)} xếp hạng khóa học`;
-    document.getElementById('modalRatingCount').textContent = ` • ${formatRatingCount(window.totalReviewsCount)}`;
+        `;
+    }
 }
 
-// Calculate rating breakdown
-function calculateRatingBreakdown(reviews) {
-    const breakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-    reviews.forEach(review => {
-        breakdown[review.diemDanhGia] = (breakdown[review.diemDanhGia] || 0) + 1;
-    });
-    return breakdown;
+// Format relative date (helper function)
+function formatRelativeDate(date) {
+    if (!date) return '';
+    const now = new Date();
+    const reviewDate = new Date(date);
+    const diff = now - reviewDate;
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    if (days === 0) return 'Hôm nay';
+    if (days === 1) return 'Hôm qua';
+    if (days < 7) return `${days} ngày trước`;
+    if (days < 30) return `${Math.floor(days / 7)} tuần trước`;
+    if (days < 365) return `${Math.floor(days / 30)} tháng trước`;
+    return `${Math.floor(days / 365)} năm trước`;
 }
 
 // Close reviews modal
@@ -639,5 +730,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('Error loading course details:', err);
         }
     }, 100);
+    
+    // Initialize notification component
+    try {
+        initNotificationComponent();
+    } catch (error) {
+        console.error('Error initializing notification component:', error);
+    }
 });
 

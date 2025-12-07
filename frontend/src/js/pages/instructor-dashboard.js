@@ -273,11 +273,9 @@ async function loadCourses() {
                         <div class="actions" style="display: flex; gap: 8px;">
                           <button class="btn btn-sm btn-primary" onclick="window.location.href='/src/pages/course-detail.html?id=${course.id}'">Xem</button>
                           <button class="btn btn-sm btn-secondary" onclick="showCourseModal(${course.id})">Sửa</button>
-                          ${course.trangThaiKiemDuyet === 'BiAn' ? 
-                            `<button class="btn btn-sm btn-success" onclick="handleUnhideCourse(${course.id})">Hiển thị</button>` :
-                            course.trangThai ? 
-                              `<button class="btn btn-sm btn-warning" onclick="handleHideCourse(${course.id})">Ẩn</button>` :
-                              ''
+                          ${course.trangThai ? 
+                            `<button class="btn btn-sm btn-warning" onclick="handleHideCourse(${course.id})">Ẩn</button>` :
+                            `<button class="btn btn-sm btn-success" onclick="handleUnhideCourse(${course.id})">Hiển thị</button>`
                           }
                         </div>
                       </td>
@@ -302,21 +300,10 @@ async function loadCourses() {
  * Get status badge HTML
  */
 function getStatusBadge(course) {
-  // Check approval status from API response
-  if (course.trangThaiKiemDuyet === 'DaDuyet') {
-    return '<span class="role-badge role-user">Đã duyệt</span>';
-  } else if (course.trangThaiKiemDuyet === 'ChoKiemDuyet') {
-    return '<span class="role-badge role-warning">Chờ duyệt</span>';
-  } else if (course.trangThaiKiemDuyet === 'TuChoi') {
-    return '<span class="role-badge role-admin">Từ chối</span>';
-  } else if (course.trangThaiKiemDuyet === 'BiAn') {
-    return '<span class="role-badge role-admin">Bị ẩn</span>';
-  } else {
-    // Fallback to TrangThai if approval status not available
-    return course.trangThai 
-      ? '<span class="role-badge role-user">Đã duyệt</span>'
-      : '<span class="role-badge role-warning">Chờ duyệt</span>';
-  }
+  // Use TrangThai to determine status
+  return course.trangThai 
+    ? '<span class="role-badge role-user">Hiển thị</span>'
+    : '<span class="role-badge role-warning">Ẩn</span>';
 }
 
 /**

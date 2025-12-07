@@ -23,6 +23,8 @@ window.formData = {
   mucDo: 'Cơ bản',
   yeuCauTruoc: '',
   hocDuoc: '',
+  ngayBatDau: '',
+  ngayKetThuc: '',
   chuongs: []
 };
 
@@ -65,6 +67,8 @@ export async function showCourseFormModal(courseId = null) {
             mucDo: courseData.mucDo || 'Cơ bản',
             yeuCauTruoc: courseData.yeuCauTruoc || '',
             hocDuoc: courseData.hocDuoc || '',
+            ngayBatDau: courseData.ngayBatDau || '',
+            ngayKetThuc: courseData.ngayKetThuc || courseData.ngayHetHan || '',
             chuongs: courseData.chuongs || []
           };
           console.log('Form data loaded:', window.formData);
@@ -88,6 +92,8 @@ export async function showCourseFormModal(courseId = null) {
         mucDo: 'Cơ bản',
         yeuCauTruoc: '',
         hocDuoc: '',
+        ngayBatDau: '',
+        ngayKetThuc: '',
         chuongs: []
       };
     }
@@ -221,6 +227,32 @@ function generateFormHtml() {
               <option value="Trung bình">Trung bình</option>
               <option value="Nâng cao">Nâng cao</option>
             </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="ngayBatDau">
+              Ngày bắt đầu
+            </label>
+            <input 
+              type="date" 
+              class="form-input" 
+              id="ngayBatDau" 
+              name="ngayBatDau"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="ngayKetThuc">
+              Ngày kết thúc
+            </label>
+            <input 
+              type="date" 
+              class="form-input" 
+              id="ngayKetThuc" 
+              name="ngayKetThuc"
+            />
           </div>
         </div>
 
@@ -487,6 +519,8 @@ function populateForm() {
   const mucDoSelect = document.getElementById('mucDo');
   const yeuCauTruocInput = document.getElementById('yeuCauTruoc');
   const hocDuocInput = document.getElementById('hocDuoc');
+  const ngayBatDauInput = document.getElementById('ngayBatDau');
+  const ngayKetThucInput = document.getElementById('ngayKetThuc');
 
   if (idDanhMucSelect) idDanhMucSelect.value = window.formData.idDanhMuc;
   if (tenKhoaHocInput) tenKhoaHocInput.value = window.formData.tenKhoaHoc;
@@ -496,6 +530,20 @@ function populateForm() {
   if (mucDoSelect) mucDoSelect.value = window.formData.mucDo || 'Cơ bản';
   if (yeuCauTruocInput) yeuCauTruocInput.value = window.formData.yeuCauTruoc || '';
   if (hocDuocInput) hocDuocInput.value = window.formData.hocDuoc || '';
+  
+  // Format date for input type="date" (YYYY-MM-DD)
+  if (ngayBatDauInput && window.formData.ngayBatDau) {
+    const ngayBatDau = new Date(window.formData.ngayBatDau);
+    if (!isNaN(ngayBatDau.getTime())) {
+      ngayBatDauInput.value = ngayBatDau.toISOString().split('T')[0];
+    }
+  }
+  if (ngayKetThucInput && window.formData.ngayKetThuc) {
+    const ngayKetThuc = new Date(window.formData.ngayKetThuc);
+    if (!isNaN(ngayKetThuc.getTime())) {
+      ngayKetThucInput.value = ngayKetThuc.toISOString().split('T')[0];
+    }
+  }
 }
 
 /**
@@ -1227,6 +1275,25 @@ window.submitCourseForm = async function() {
     console.log('FormData after video upload:', JSON.stringify(window.formData, null, 2));
 
     // Prepare data
+    // Format dates: convert empty string to null, keep ISO string format
+    let ngayBatDau = null;
+    let ngayKetThuc = null;
+    
+    if (window.formData.ngayBatDau && window.formData.ngayBatDau.trim() !== '') {
+      // If it's already an ISO string, use it; otherwise format it
+      const date = new Date(window.formData.ngayBatDau);
+      if (!isNaN(date.getTime())) {
+        ngayBatDau = date.toISOString();
+      }
+    }
+    
+    if (window.formData.ngayKetThuc && window.formData.ngayKetThuc.trim() !== '') {
+      const date = new Date(window.formData.ngayKetThuc);
+      if (!isNaN(date.getTime())) {
+        ngayKetThuc = date.toISOString();
+      }
+    }
+    
     const courseData = {
       idDanhMuc: parseInt(window.formData.idDanhMuc),
       tenKhoaHoc: window.formData.tenKhoaHoc,
@@ -1236,6 +1303,8 @@ window.submitCourseForm = async function() {
       mucDo: window.formData.mucDo || 'Cơ bản',
       yeuCauTruoc: window.formData.yeuCauTruoc || '',
       hocDuoc: window.formData.hocDuoc || '',
+      ngayBatDau: ngayBatDau,
+      ngayKetThuc: ngayKetThuc,
       chuongs: window.formData.chuongs.map(chuong => ({
         tenChuong: chuong.tenChuong,
         moTa: chuong.moTa || '',

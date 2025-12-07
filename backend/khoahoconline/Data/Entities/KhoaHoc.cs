@@ -34,9 +34,6 @@ public partial class KhoaHoc
     [StringLength(500)]
     public string? HinhDaiDien { get; set; }
 
-    [StringLength(500)]
-    public string? VideoGioiThieu { get; set; }
-
     [StringLength(50)]
     public string? MucDo { get; set; }
 
@@ -55,14 +52,12 @@ public partial class KhoaHoc
     [Column(TypeName = "datetime")]
     public DateTime? NgayCapNhat { get; set; }
 
+    [Column(TypeName = "datetime")]
+    public DateTime? NgayPublish { get; set; }
+
     public int PhienBanHienTai { get; set; }
 
     public bool IsDeleted { get; set; }
-
-    [StringLength(200)]
-    public string? VideoGioiThieuPublicId { get; set; }
-
-    public int? VideoGioiThieuDuration { get; set; }
 
     // ===== NAVIGATION PROPERTIES =====
 
@@ -104,5 +99,9 @@ public partial class KhoaHoc
     public virtual ICollection<KhoaHocPhienBan> KhoaHocPhienBans { get; set; } = new List<KhoaHocPhienBan>();
 
     [InverseProperty("IdKhoaHocNavigation")]
+    public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+
+    [InverseProperty("IdKhoaHocNavigation")]
     public virtual ICollection<KiemDuyetKhoaHoc> KiemDuyetKhoaHocs { get; set; } = new List<KiemDuyetKhoaHoc>();
+
 }

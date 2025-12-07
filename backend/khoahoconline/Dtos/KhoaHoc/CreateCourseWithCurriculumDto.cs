@@ -25,12 +25,15 @@ namespace khoahoconline.Dtos.KhoaHoc
         [StringLength(500, ErrorMessage = "Hình đại diện không được vượt quá 500 ký tự")]
         public string? HinhDaiDien { get; set; }
 
-        [StringLength(500, ErrorMessage = "Video giới thiệu không được vượt quá 500 ký tự")]
-        public string? VideoGioiThieu { get; set; }
-
         public string? YeuCauTruoc { get; set; }
 
         public string? HocDuoc { get; set; }
+
+        /// <summary>
+        /// Nếu true: Publish khóa học ngay (cần validate đầy đủ)
+        /// Nếu false: Lưu nháp (không cần validate đầy đủ)
+        /// </summary>
+        public bool Publish { get; set; } = false;
 
         [Required(ErrorMessage = "Khóa học phải có ít nhất một chương")]
         [MinLength(1, ErrorMessage = "Khóa học phải có ít nhất một chương")]
@@ -69,6 +72,8 @@ namespace khoahoconline.Dtos.KhoaHoc
         public bool? MienPhiXem { get; set; }
     }
 }
+
+
 
 
 

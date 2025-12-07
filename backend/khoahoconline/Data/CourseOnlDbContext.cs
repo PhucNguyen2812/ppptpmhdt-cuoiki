@@ -41,6 +41,8 @@ public partial class CourseOnlDbContext : DbContext
     public virtual DbSet<TaiLieuKhoaHoc> TaiLieuKhoaHocs { get; set; }
     public virtual DbSet<ChiaSeLuanNhuan> ChiaSeLuanNhuans { get; set; }
     public virtual DbSet<KhoaHocPhienBan> KhoaHocPhienBans { get; set; }
+    public virtual DbSet<Notification> Notifications { get; set; }
+    public virtual DbSet<YeuCauDangKyGiangVien> YeuCauDangKyGiangViens { get; set; }
     public virtual DbSet<KiemDuyetKhoaHoc> KiemDuyetKhoaHocs { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -318,6 +320,55 @@ public partial class CourseOnlDbContext : DbContext
 
             entity.Property(e => e.NgayCapNhat).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.NgayTao).HasDefaultValueSql("(getdate())");
+        });
+
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Notifica__3214EC07");
+
+            entity.Property(e => e.TrangThai).HasDefaultValue("Chưa đọc");
+            entity.Property(e => e.NgayTao).HasDefaultValueSql("(getdate())");
+
+            entity.HasOne(d => d.IdNguoiDungNavigation).WithMany(p => p.Notifications)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Notification_NguoiDung");
+
+            entity.HasOne(d => d.IdKhoaHocNavigation).WithMany(p => p.Notifications)
+                .HasConstraintName("FK_Notification_KhoaHoc");
+        });
+
+        modelBuilder.Entity<YeuCauDangKyGiangVien>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__YeuCauDa__3214EC07");
+
+            entity.Property(e => e.TrangThai).HasDefaultValue("Chờ duyệt");
+            entity.Property(e => e.NgayGui).HasDefaultValueSql("(getdate())");
+
+            entity.HasOne(d => d.IdHocVienNavigation).WithMany(p => p.YeuCauDangKyGiangViens)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_YeuCauDangKyGiangVien_HocVien");
+
+            entity.HasOne(d => d.IdNguoiDuyetNavigation).WithMany(p => p.YeuCauDangKyGiangVienDuyets)
+                .HasConstraintName("FK_YeuCauDangKyGiangVien_NguoiDuyet");
+        });
+
+        modelBuilder.Entity<KiemDuyetKhoaHoc>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_KiemDuyetKhoaHoc");
+
+            entity.Property(e => e.TrangThai).HasDefaultValue("Chờ duyệt");
+            entity.Property(e => e.NgayGui).HasDefaultValueSql("(getdate())");
+
+            entity.HasOne(d => d.IdKhoaHocNavigation).WithMany(p => p.KiemDuyetKhoaHocs)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_KiemDuyetKhoaHoc_KhoaHoc");
+
+            entity.HasOne(d => d.IdNguoiGuiNavigation).WithMany(p => p.KiemDuyetKhoaHocGui)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_KiemDuyetKhoaHoc_NguoiGui");
+
+            entity.HasOne(d => d.IdNguoiDuyetNavigation).WithMany(p => p.KiemDuyetKhoaHocDuyet)
+                .HasConstraintName("FK_KiemDuyetKhoaHoc_NguoiDuyet");
         });
 
         OnModelCreatingPartial(modelBuilder);

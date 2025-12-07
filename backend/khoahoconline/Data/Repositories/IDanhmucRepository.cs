@@ -17,7 +17,7 @@ namespace khoahoconline.Data.Repositories
         /// <summary>
         /// Lấy danh mục theo ID
         /// </summary>
-        Task<DanhMucKhoaHoc?> GetByIdAsync(int id);
+        new Task<DanhMucKhoaHoc?> GetByIdAsync(int id);
 
         /// <summary>
         /// Lấy danh mục theo ID kèm danh sách khóa học

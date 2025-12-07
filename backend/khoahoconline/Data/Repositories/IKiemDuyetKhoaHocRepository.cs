@@ -1,34 +1,36 @@
 using khoahoconline.Data.Entities;
+using khoahoconline.Dtos;
 
 namespace khoahoconline.Data.Repositories
 {
     public interface IKiemDuyetKhoaHocRepository : IBaseRepository<KiemDuyetKhoaHoc>
     {
         /// <summary>
-        /// Lấy bản kiểm duyệt mới nhất của khóa học
+        /// Lấy danh sách yêu cầu kiểm duyệt với pagination và filter
         /// </summary>
-        Task<KiemDuyetKhoaHoc?> GetLatestByCourseIdAsync(int courseId);
+        Task<PagedResult<KiemDuyetKhoaHoc>> GetPagedAsync(string? trangThai = null, int pageNumber = 1, int pageSize = 10);
 
         /// <summary>
-        /// Lấy bản kiểm duyệt theo khóa học và phiên bản
+        /// Lấy yêu cầu kiểm duyệt theo ID kèm thông tin khóa học, giảng viên và người duyệt
         /// </summary>
-        Task<KiemDuyetKhoaHoc?> GetByCourseIdAndVersionAsync(int courseId, int version);
+        Task<KiemDuyetKhoaHoc?> GetByIdWithDetailsAsync(int id);
 
         /// <summary>
-        /// Lấy danh sách khóa học chờ kiểm duyệt
+        /// Lấy yêu cầu kiểm duyệt của khóa học (nếu có)
         /// </summary>
-        Task<List<KiemDuyetKhoaHoc>> GetPendingApprovalsAsync();
+        Task<KiemDuyetKhoaHoc?> GetByKhoaHocIdAsync(int khoaHocId);
 
         /// <summary>
-        /// Kiểm tra xem khóa học có đang chờ kiểm duyệt không
+        /// Kiểm tra khóa học đã có yêu cầu chờ duyệt chưa
         /// </summary>
-        Task<bool> IsCoursePendingAsync(int courseId);
-
-        /// <summary>
-        /// Lấy tất cả các bản kiểm duyệt với filter theo trạng thái (lấy bản mới nhất của mỗi khóa học)
-        /// </summary>
-        Task<List<KiemDuyetKhoaHoc>> GetAllApprovalsAsync(string? status = null);
+        Task<bool> HasPendingRequestAsync(int khoaHocId);
     }
 }
+
+
+
+
+
+
 
 

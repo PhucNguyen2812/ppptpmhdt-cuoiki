@@ -24,8 +24,6 @@ namespace khoahoconline.Dtos.KhoaHoc
 
         public string? HinhDaiDien { get; set; }
 
-        public string? VideoGioiThieu { get; set; }
-
         public string? MucDo { get; set; }
 
         public bool? TrangThai { get; set; }

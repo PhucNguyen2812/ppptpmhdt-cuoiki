@@ -6,5 +6,6 @@ namespace khoahoconline.Data.Repositories
     {
         Task<VaiTro?> GetByTenVaiTroAsync(string tenVaiTro);
         Task SoftDeleteAsync(VaiTro vaiTro);
+        Task<List<VaiTro>> GetAllAsync();
     }
 }

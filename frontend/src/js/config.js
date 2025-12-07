@@ -20,8 +20,6 @@ export const API_ENDPOINTS = {
     COURSE_DETAIL: "v1/courses",
     COURSE_CURRICULUM: "v1/courses",
     COURSES_BY_INSTRUCTOR: "v1/courses/instructor",
-    COURSES_PENDING: "v1/courses/pending",
-    COURSES_APPROVALS: "v1/courses/approvals",
     
     // User
     NGUOIDUNGS: "v1/nguoidungs",

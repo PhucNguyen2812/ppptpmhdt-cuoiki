@@ -69,3 +69,12 @@ public partial class KhoaHocPhienBan
 
 
 
+
+
+
+
+
+
+
+
+

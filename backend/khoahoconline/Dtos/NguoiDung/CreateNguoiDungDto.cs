@@ -20,5 +20,11 @@ namespace khoahoconline.Dtos.NguoiDung
 
         public string? TieuSu { get; set; }
 
+        /// <summary>
+        /// Danh sách tên vai trò (roles) cần gán cho người dùng
+        /// Không được chứa "ADMIN"
+        /// Nếu có "GIANGVIEN" thì tự động thêm "HOCVIEN"
+        /// </summary>
+        public List<string>? Roles { get; set; }
     }
 }

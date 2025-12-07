@@ -8,12 +8,14 @@ import { AdminSidebar } from '../../components/admin/AdminSidebar.js';
 import { requireAuth } from '../../api/authApi.js';
 import { isAdmin, getUserInfo } from '../../utils/authHelper.js';
 import { getUserFromToken } from '../../utils/token.js';
-import { getAllUsers, deleteUser } from '../../api/nguoiDungApi.js';
-import { getCourses, getAllCourseApprovals, approveCourse, rejectCourse, hideCourseByAdmin, unhideCourseByAdmin, getCourseForReview } from '../../api/courseApi.js';
-import { getAllCategories, getCategories, getCategoryById } from '../../api/categoryApi.js';
+import { getAllUsers, deleteUser, restoreUser } from '../../api/nguoiDungApi.js';
+import { getCourses } from '../../api/courseApi.js';
+import { getAllCategories, getCategories, getCategoryById, getAllCategoriesAdmin, deleteCategory, restoreCategory } from '../../api/categoryApi.js';
+import { getInstructorRequests, getInstructorRequestById, approveInstructorRequest as approveRequest, rejectInstructorRequest as rejectRequest } from '../../api/instructorRequestApi.js';
 import { Modal } from '../../components/admin/modal.js';
 import { API_BASE_URL } from '../../config.js';
 import { showUserFormModal, showEditUserFormModal } from './user-form-modal.js';
+import { showAddCategoryModal, showEditCategoryModal } from './category-form-modal.js';
 
 // Check authentication and admin role
 async function checkAccess() {
@@ -76,6 +78,15 @@ async function initializeLayout() {
 }
 
 /**
+ * Show add category modal
+ */
+window.showAddCategoryModal = function() {
+  showAddCategoryModal(() => {
+    loadCategories();
+  });
+};
+
+/**
  * Handle menu item click
  */
 function handleMenuClick(navId, sectionId) {
@@ -97,8 +108,8 @@ function handleMenuClick(navId, sectionId) {
     case 'users':
       loadUsers();
       break;
-    case 'course-review':
-      loadCourseReview();
+    case 'instructor-requests':
+      loadInstructorRequests();
       break;
     case 'categories':
       loadCategories();
@@ -208,75 +219,151 @@ async function loadUsers() {
   content.innerHTML = '<div class="loading-spinner"></div> Đang tải...';
 
   try {
-    const usersResponse = await getAllUsers({ pageNumber: 1, pageSize: 20 });
+    // Load both active and inactive users
+    let activeUsersResponse, inactiveUsersResponse;
     
-    if (usersResponse.success && usersResponse.data) {
-      const users = usersResponse.data.items || [];
-      
-      content.innerHTML = `
-        <div style="margin-bottom: 20px; display: flex; gap: 12px;">
-          <button class="btn btn-primary" onclick="window.showAddUserModal()">
-            <i class="fas fa-plus"></i> Thêm người dùng mới
-          </button>
+    try {
+      [activeUsersResponse, inactiveUsersResponse] = await Promise.all([
+        getAllUsers({ pageNumber: 1, pageSize: 1000, active: true }),
+        getAllUsers({ pageNumber: 1, pageSize: 1000, active: false })
+      ]);
+    } catch (apiError) {
+      console.error('API Error:', apiError);
+      throw new Error(apiError.message || 'Không thể kết nối đến server');
+    }
+    
+    let allUsers = [];
+    
+    // Check if responses are valid
+    if (activeUsersResponse && activeUsersResponse.success && activeUsersResponse.data) {
+      allUsers = [...(activeUsersResponse.data.items || [])];
+    } else if (activeUsersResponse && !activeUsersResponse.success) {
+      console.warn('Active users response failed:', activeUsersResponse);
+    }
+    
+    if (inactiveUsersResponse && inactiveUsersResponse.success && inactiveUsersResponse.data) {
+      allUsers = [...allUsers, ...(inactiveUsersResponse.data.items || [])];
+    } else if (inactiveUsersResponse && !inactiveUsersResponse.success) {
+      console.warn('Inactive users response failed:', inactiveUsersResponse);
+    }
+    
+    // Helper function to format roles
+    const formatRoles = (user) => {
+      const roles = user.vaiTros || user.VaiTros || user.nguoiDungVaiTros || [];
+      if (Array.isArray(roles) && roles.length > 0) {
+        // If roles is array of strings
+        if (typeof roles[0] === 'string') {
+          return roles.map(r => {
+            const roleName = r.toUpperCase();
+            const roleLabels = {
+              'ADMIN': 'Admin',
+              'GIANGVIEN': 'Giảng viên',
+              'HOCVIEN': 'Học viên',
+              'KIEMDUYET': 'Kiểm duyệt'
+            };
+            return `<span class="role-badge" style="background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-right: 4px;">${roleLabels[roleName] || r}</span>`;
+          }).join('');
+        }
+        // If roles is array of objects
+        if (typeof roles[0] === 'object' && roles[0].tenVaiTro) {
+          return roles.map(r => {
+            const roleName = (r.tenVaiTro || r.TenVaiTro || '').toUpperCase();
+            const roleLabels = {
+              'ADMIN': 'Admin',
+              'GIANGVIEN': 'Giảng viên',
+              'HOCVIEN': 'Học viên',
+              'KIEMDUYET': 'Kiểm duyệt'
+            };
+            return `<span class="role-badge" style="background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-right: 4px;">${roleLabels[roleName] || roleName}</span>`;
+          }).join('');
+        }
+      }
+      return '<span style="color: #94a3b8;">Chưa có vai trò</span>';
+    };
+    
+    content.innerHTML = `
+      <div style="margin-bottom: 20px; display: flex; gap: 12px;">
+        <button class="btn btn-primary" onclick="window.showAddUserModal()">
+          <i class="fas fa-plus"></i> Thêm người dùng mới
+        </button>
+      </div>
+      ${allUsers.length === 0 ? `
+        <div class="empty-state">
+          <div class="empty-state-icon">👥</div>
+          <div class="empty-state-text">Chưa có người dùng nào</div>
+          <div class="empty-state-subtext">Hãy thêm người dùng đầu tiên!</div>
         </div>
-        ${users.length === 0 ? `
-          <div class="empty-state">
-            <div class="empty-state-icon">👥</div>
-            <div class="empty-state-text">Chưa có người dùng nào</div>
-            <div class="empty-state-subtext">Hãy thêm người dùng đầu tiên!</div>
-          </div>
-        ` : `
-          <div class="table-container">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Họ tên</th>
-                  <th>Email</th>
-                  <th>Số điện thoại</th>
-                  <th>Trạng thái</th>
-                  <th>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${users.map(user => {
-                  const statusBadge = user.trangThai 
-                    ? '<span class="role-badge role-user">Hoạt động</span>'
-                    : '<span class="role-badge role-admin">Đã khóa</span>';
-                  
-                  return `
-                    <tr>
-                      <td>${user.id}</td>
-                      <td>${user.hoTen || 'N/A'}</td>
-                      <td>${user.email || 'N/A'}</td>
-                      <td>${user.soDienThoai || 'N/A'}</td>
-                      <td>${statusBadge}</td>
-                      <td>
-                        <div class="actions" style="display: flex; gap: 8px;">
-                          <button class="btn btn-sm btn-secondary" onclick="window.showEditUserModal(${user.id})">
-                            <i class="fas fa-edit"></i> Sửa
-                          </button>
+      ` : `
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Họ tên</th>
+                <th>Email</th>
+                <th>Số điện thoại</th>
+                <th>Vai trò</th>
+                <th>Trạng thái</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${allUsers.map(user => {
+                const statusBadge = user.trangThai 
+                  ? '<span class="role-badge" style="background: #d1fae5; color: #065f46;">🟢 Hoạt động</span>'
+                  : '<span class="role-badge" style="background: #fee2e2; color: #991b1b;">🔴 Đã khóa</span>';
+                
+                const rolesHtml = formatRoles(user);
+                
+                return `
+                  <tr style="${!user.trangThai ? 'opacity: 0.7;' : ''}">
+                    <td>${user.id}</td>
+                    <td>${user.hoTen || 'N/A'}</td>
+                    <td>${user.email || 'N/A'}</td>
+                    <td>${user.soDienThoai || 'N/A'}</td>
+                    <td>${rolesHtml}</td>
+                    <td>${statusBadge}</td>
+                    <td>
+                      <div class="actions" style="display: flex; gap: 8px;">
+                        <button class="btn btn-sm btn-secondary" onclick="window.showEditUserModal(${user.id})">
+                          <i class="fas fa-edit"></i> Sửa
+                        </button>
+                        ${user.trangThai ? `
                           <button class="btn btn-sm btn-danger" onclick="window.handleDeleteUser(${user.id}, '${(user.hoTen || '').replace(/'/g, "\\'")}')">
                             <i class="fas fa-trash"></i> Xóa
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
-          </div>
-        `}
-      `;
-    } else {
-      content.innerHTML = '<p>Không thể tải danh sách người dùng.</p>';
-    }
+                        ` : `
+                          <button class="btn btn-sm btn-success" onclick="window.handleRestoreUser(${user.id}, '${(user.hoTen || '').replace(/'/g, "\\'")}')">
+                            <i class="fas fa-undo"></i> Khôi phục
+                          </button>
+                        `}
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `}
+    `;
   } catch (error) {
     console.error('Error loading users:', error);
-    content.innerHTML = '<p>Có lỗi xảy ra khi tải danh sách người dùng.</p>';
+    const errorMessage = error.message || 'Có lỗi xảy ra khi tải danh sách người dùng';
+    content.innerHTML = `
+      <div style="padding: 20px; background: #fee2e2; border-radius: 8px; border: 1px solid #fca5a5;">
+        <h3 style="color: #991b1b; margin-bottom: 10px;">❌ Lỗi khi tải danh sách người dùng</h3>
+        <p style="color: #7f1d1d; margin-bottom: 10px;">${errorMessage}</p>
+        <button class="btn btn-primary" onclick="loadUsers()" style="margin-top: 10px;">
+          <i class="fas fa-refresh"></i> Thử lại
+        </button>
+      </div>
+    `;
   }
 }
+
+// Expose loadUsers to global scope for onclick handlers
+window.loadUsers = loadUsers;
 
 /**
  * Show add user modal
@@ -297,6 +384,58 @@ window.showEditUserModal = function(userId) {
 };
 
 /**
+ * Show add category modal (exposed to window for onclick handlers)
+ */
+window.showAddCategoryModal = function() {
+  showAddCategoryModal(() => {
+    loadCategories();
+  });
+};
+
+/**
+ * Show edit category modal (exposed to window for onclick handlers)
+ */
+window.showEditCategoryModal = function(categoryId) {
+  showEditCategoryModal(categoryId, () => {
+    loadCategories();
+  });
+};
+
+/**
+ * Handle hide category (soft delete)
+ */
+window.handleHideCategory = async function(categoryId, categoryName) {
+  if (!confirm(`Bạn có chắc chắn muốn ẩn danh mục "${categoryName}"?\n\nDanh mục sẽ bị ẩn khỏi trang công khai nhưng vẫn được lưu trong hệ thống.`)) {
+    return;
+  }
+
+  try {
+    await deleteCategory(categoryId);
+    alert('Ẩn danh mục thành công!');
+    loadCategories();
+  } catch (error) {
+    alert('Lỗi: ' + (error.message || 'Có lỗi xảy ra khi ẩn danh mục'));
+  }
+};
+
+/**
+ * Handle restore category
+ */
+window.handleRestoreCategory = async function(categoryId, categoryName) {
+  if (!confirm(`Bạn có chắc chắn muốn khôi phục danh mục "${categoryName}"?\n\nDanh mục sẽ được hiển thị lại trên trang công khai.`)) {
+    return;
+  }
+
+  try {
+    await restoreCategory(categoryId);
+    alert('Khôi phục danh mục thành công!');
+    loadCategories();
+  } catch (error) {
+    alert('Lỗi: ' + (error.message || 'Có lỗi xảy ra khi khôi phục danh mục'));
+  }
+};
+
+/**
  * Handle delete user (soft delete)
  */
 window.handleDeleteUser = async function(userId, userName) {
@@ -313,192 +452,160 @@ window.handleDeleteUser = async function(userId, userName) {
   }
 };
 
-// Store current filter status
-let currentStatusFilter = null;
+/**
+ * Handle restore user
+ */
+window.handleRestoreUser = async function(userId, userName) {
+  if (!confirm(`Bạn có chắc chắn muốn khôi phục người dùng "${userName}"?\n\nNgười dùng sẽ được kích hoạt lại.`)) {
+    return;
+  }
+
+  try {
+    await restoreUser(userId);
+    alert('Khôi phục người dùng thành công!');
+    loadUsers();
+  } catch (error) {
+    alert('Lỗi: ' + (error.message || 'Có lỗi xảy ra khi khôi phục người dùng'));
+  }
+};
 
 /**
- * Load course review content
+ * Load instructor requests content
  */
-async function loadCourseReview(statusFilter = null) {
-  const content = document.getElementById('course-review-content');
+async function loadInstructorRequests() {
+  const content = document.getElementById('instructor-requests-content');
   if (!content) return;
 
   content.innerHTML = '<div class="loading-spinner"></div> Đang tải...';
 
   try {
-    console.log('Loading course approvals with filter:', statusFilter);
-    const approvalsResponse = await getAllCourseApprovals(statusFilter);
-    console.log('Approvals response:', approvalsResponse);
+    // Load pending requests by default
+    const response = await getInstructorRequests({ 
+      trangThai: 'Chờ duyệt',
+      pageNumber: 1,
+      pageSize: 50
+    });
     
-    if (approvalsResponse.success && approvalsResponse.data) {
-      const approvals = approvalsResponse.data || [];
+    if (response.success && response.data) {
+      const requests = response.data.items || [];
+      const totalCount = response.data.totalCount || 0;
       
-      // Map status to Vietnamese
-      const statusMap = {
-        'ChoKiemDuyet': { text: 'Chờ duyệt', class: 'role-badge role-warning' },
-        'DaDuyet': { text: 'Đã duyệt', class: 'role-badge role-user' },
-        'TuChoi': { text: 'Từ chối', class: 'role-badge role-admin' },
-        'BiAn': { text: 'Bị ẩn', class: 'role-badge role-admin' }
-      };
-
-      const getStatusBadge = (status) => {
-        const statusInfo = statusMap[status] || { text: status, class: 'role-badge' };
-        return `<span class="${statusInfo.class}">${statusInfo.text}</span>`;
-      };
-      
-      content.innerHTML = `
-        <div style="margin-bottom: 20px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <label for="status-filter" style="font-weight: 600; color: #334155;">Lọc theo trạng thái:</label>
-            <select id="status-filter" class="form-control" style="width: auto; min-width: 180px;" onchange="handleStatusFilterChange(this.value)">
-              <option value="">Tất cả</option>
-              <option value="ChoKiemDuyet" ${statusFilter === 'ChoKiemDuyet' ? 'selected' : ''}>Chờ duyệt</option>
-              <option value="DaDuyet" ${statusFilter === 'DaDuyet' ? 'selected' : ''}>Đã duyệt</option>
-              <option value="TuChoi" ${statusFilter === 'TuChoi' ? 'selected' : ''}>Từ chối</option>
-              <option value="BiAn" ${statusFilter === 'BiAn' ? 'selected' : ''}>Bị ẩn</option>
-            </select>
-          </div>
-          <div style="margin-left: auto; color: #64748b; font-size: 14px;">
-            Tổng: ${approvals.length} khóa học
-          </div>
+      // Filter buttons
+      const filterButtons = `
+        <div style="margin-bottom: 20px; display: flex; gap: 12px; flex-wrap: wrap;">
+          <button class="btn btn-primary" onclick="loadInstructorRequestsByStatus('Chờ duyệt')" id="filter-pending">
+            <i class="fas fa-clock"></i> Chờ duyệt
+          </button>
+          <button class="btn btn-secondary" onclick="loadInstructorRequestsByStatus('Đã duyệt')" id="filter-approved">
+            <i class="fas fa-check"></i> Đã duyệt
+          </button>
+          <button class="btn btn-secondary" onclick="loadInstructorRequestsByStatus('Từ chối')" id="filter-rejected">
+            <i class="fas fa-times"></i> Đã từ chối
+          </button>
+          <button class="btn btn-secondary" onclick="loadInstructorRequestsByStatus(null)" id="filter-all">
+            <i class="fas fa-list"></i> Tất cả
+          </button>
         </div>
-        ${approvals.length === 0 ? `
+      `;
+      
+      if (requests.length === 0) {
+        content.innerHTML = filterButtons + `
           <div class="empty-state">
-            <div class="empty-state-icon">📚</div>
-            <div class="empty-state-text">Không có khóa học nào</div>
-            <div class="empty-state-subtext">${statusFilter ? 'Không có khóa học với trạng thái đã chọn' : 'Chưa có khóa học nào trong hệ thống'}</div>
+            <div class="empty-state-icon">👨‍🏫</div>
+            <div class="empty-state-text">Không có yêu cầu đăng ký giảng viên nào</div>
+            <div class="empty-state-subtext">Tất cả yêu cầu đã được xử lý</div>
           </div>
-        ` : `
-          <div class="table-container">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Tên khóa học</th>
-                  <th>Người gửi</th>
-                  <th>Phiên bản</th>
-                  <th>Trạng thái</th>
-                  <th>Ngày gửi</th>
-                  <th>Ngày kiểm duyệt</th>
-                  <th>Người kiểm duyệt</th>
-                  <th>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${approvals.map(approval => {
-                  const canApprove = approval.trangThaiKiemDuyet === 'ChoKiemDuyet';
-                  const canReject = approval.trangThaiKiemDuyet === 'ChoKiemDuyet';
-                  const canHide = approval.trangThaiKiemDuyet === 'DaDuyet';
-                  const canUnhide = approval.trangThaiKiemDuyet === 'BiAn';
-                  
-                  return `
-                    <tr>
-                      <td>${approval.idKhoaHoc}</td>
-                      <td><strong>${approval.tenKhoaHoc || 'N/A'}</strong></td>
-                      <td>${approval.tenNguoiGui || 'N/A'}</td>
-                      <td>${approval.phienBan}</td>
-                      <td>${getStatusBadge(approval.trangThaiKiemDuyet)}</td>
-                      <td>${approval.ngayGui ? new Date(approval.ngayGui).toLocaleDateString('vi-VN') : 'N/A'}</td>
-                      <td>${approval.ngayKiemDuyet ? new Date(approval.ngayKiemDuyet).toLocaleDateString('vi-VN') : '-'}</td>
-                      <td>${approval.tenNguoiKiemDuyet || '-'}</td>
-                      <td>
-                        <div class="actions" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                          ${canApprove ? `
-                            <button class="btn btn-sm btn-success" onclick="handleApproveCourse(${approval.idKhoaHoc})" title="Duyệt khóa học">
-                              <i class="fas fa-check"></i> Duyệt
-                            </button>
-                          ` : ''}
-                          ${canReject ? `
-                            <button class="btn btn-sm btn-danger" onclick="handleRejectCourse(${approval.idKhoaHoc})" title="Từ chối khóa học">
-                              <i class="fas fa-times"></i> Từ chối
-                            </button>
-                          ` : ''}
-                          ${canHide ? `
-                            <button class="btn btn-sm btn-warning" onclick="handleHideCourseByAdmin(${approval.idKhoaHoc})" title="Ẩn khóa học">
-                              <i class="fas fa-eye-slash"></i> Ẩn
-                            </button>
-                          ` : ''}
-                          ${canUnhide ? `
-                            <button class="btn btn-sm btn-success" onclick="handleUnhideCourseByAdmin(${approval.idKhoaHoc})" title="Bỏ ẩn khóa học">
-                              <i class="fas fa-eye"></i> Hiển thị
-                            </button>
-                          ` : ''}
-                          <button class="btn btn-sm btn-primary" onclick="showCourseDetailModal(${approval.idKhoaHoc})" title="Xem chi tiết">
-                            <i class="fas fa-eye"></i> Xem
+        `;
+        return;
+      }
+      
+      content.innerHTML = filterButtons + `
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Họ tên</th>
+                <th>Email</th>
+                <th>Ngày gửi</th>
+                <th>Trạng thái</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${requests.map(request => {
+                const status = request.trangThai || request.TrangThai || 'Chờ duyệt';
+                const ngayGui = request.ngayGui || request.NgayGui;
+                const formattedDate = ngayGui ? new Date(ngayGui).toLocaleDateString('vi-VN') : 'N/A';
+                
+                let statusBadge = '';
+                if (status === 'Chờ duyệt' || status === 'Cho duyet') {
+                  statusBadge = '<span class="role-badge" style="background: #fef3c7; color: #92400e;">⏳ Chờ duyệt</span>';
+                } else if (status === 'Đã duyệt' || status === 'Da duyet') {
+                  statusBadge = '<span class="role-badge" style="background: #d1fae5; color: #065f46;">✅ Đã duyệt</span>';
+                } else if (status === 'Từ chối' || status === 'Tu choi') {
+                  statusBadge = '<span class="role-badge" style="background: #fee2e2; color: #991b1b;">❌ Từ chối</span>';
+                }
+                
+                const canApprove = status === 'Chờ duyệt' || status === 'Cho duyet';
+                const canReject = status === 'Chờ duyệt' || status === 'Cho duyet';
+                
+                return `
+                  <tr>
+                    <td>${request.id || request.Id}</td>
+                    <td><strong>${request.hoTen || request.HoTen || 'N/A'}</strong></td>
+                    <td>${request.email || request.Email || 'N/A'}</td>
+                    <td>${formattedDate}</td>
+                    <td>${statusBadge}</td>
+                    <td>
+                      <div class="actions" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn btn-sm btn-info" onclick="window.viewInstructorRequestDetail(${request.id || request.Id})">
+                          <i class="fas fa-eye"></i> Chi tiết
+                        </button>
+                        ${canApprove ? `
+                          <button class="btn btn-sm btn-success" onclick="window.approveInstructorRequest(${request.id || request.Id})">
+                            <i class="fas fa-check"></i> Duyệt
                           </button>
-                          ${approval.lyDoTuChoi ? `
-                            <button class="btn btn-sm btn-secondary" onclick="showRejectionReason('${(approval.lyDoTuChoi || '').replace(/'/g, "\\'")}')" title="Xem lý do từ chối">
-                              <i class="fas fa-info-circle"></i> Lý do
-                            </button>
-                          ` : ''}
-                        </div>
-                      </td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
+                        ` : ''}
+                        ${canReject ? `
+                          <button class="btn btn-sm btn-danger" onclick="window.rejectInstructorRequest(${request.id || request.Id})">
+                            <i class="fas fa-times"></i> Từ chối
+                          </button>
+                        ` : ''}
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+        ${totalCount > requests.length ? `
+          <div style="margin-top: 20px; text-align: center; color: #64748b;">
+            Hiển thị ${requests.length} / ${totalCount} yêu cầu
           </div>
-        `}
+        ` : ''}
       `;
     } else {
-      console.error('API response không thành công:', approvalsResponse);
       content.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-state-icon">⚠️</div>
-          <div class="empty-state-text">Không thể tải danh sách khóa học</div>
-          <div class="empty-state-subtext">${approvalsResponse.message || 'Lỗi không xác định'}</div>
-          <button class="btn btn-primary" onclick="loadCourseReview();" style="margin-top: 16px;">
-            <i class="fas fa-redo"></i> Thử lại
+        <div style="padding: 20px; background: #fee2e2; border-radius: 8px; border: 1px solid #fca5a5;">
+          <h3 style="color: #991b1b; margin-bottom: 10px;">❌ Lỗi khi tải danh sách</h3>
+          <p style="color: #7f1d1d;">Không thể lấy dữ liệu từ server. Vui lòng thử lại.</p>
+          <button class="btn btn-primary" onclick="loadInstructorRequests()" style="margin-top: 10px;">
+            <i class="fas fa-refresh"></i> Thử lại
           </button>
         </div>
       `;
     }
   } catch (error) {
-    console.error('Error loading course review:', error);
-    console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
-    
-    let errorMessage = error.message || 'Lỗi không xác định';
-    let errorDetails = '';
-    
-    if (error.message && error.message.includes('403')) {
-      errorMessage = 'Không có quyền truy cập';
-      errorDetails = `
-        <div style="margin-top: 12px; padding: 12px; background: #fef3c7; border-radius: 8px; color: #92400e;">
-          <strong>⚠️ Lỗi 403 Forbidden:</strong><br>
-          Bạn không có quyền truy cập endpoint này. Cần role: <strong>QUANTRIVIEN</strong> hoặc <strong>KIEMDUYETVIEN</strong>.
-        </div>
-      `;
-    } else if (error.message && error.message.includes('401')) {
-      errorMessage = 'Chưa đăng nhập hoặc token đã hết hạn';
-      errorDetails = `
-        <div style="margin-top: 12px; padding: 12px; background: #fee2e2; border-radius: 8px; color: #991b1b;">
-          <strong>⚠️ Lỗi 401 Unauthorized:</strong><br>
-          Vui lòng đăng nhập lại.
-        </div>
-      `;
-    } else if (error.message && error.message.includes('404')) {
-      errorMessage = 'Endpoint không tồn tại';
-      errorDetails = `
-        <div style="margin-top: 12px; padding: 12px; background: #fee2e2; border-radius: 8px; color: #991b1b;">
-          <strong>⚠️ Lỗi 404 Not Found:</strong><br>
-          Endpoint /api/v1/courses/approvals không tồn tại. Kiểm tra lại backend.
-        </div>
-      `;
-    }
-    
+    console.error('Error loading instructor requests:', error);
+    const errorMessage = error.message || 'Có lỗi xảy ra khi tải danh sách yêu cầu đăng ký giảng viên';
     content.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">❌</div>
-        <div class="empty-state-text">Có lỗi xảy ra khi tải danh sách khóa học</div>
-        <div class="empty-state-subtext">${errorMessage}</div>
-        ${errorDetails}
-        <button class="btn btn-primary" onclick="loadCourseReview(${statusFilter ? `'${statusFilter}'` : 'null'})" style="margin-top: 16px;">
-          <i class="fas fa-redo"></i> Thử lại
+      <div style="padding: 20px; background: #fee2e2; border-radius: 8px; border: 1px solid #fca5a5;">
+        <h3 style="color: #991b1b; margin-bottom: 10px;">❌ Lỗi khi tải danh sách</h3>
+        <p style="color: #7f1d1d; margin-bottom: 10px;">${errorMessage}</p>
+        <button class="btn btn-primary" onclick="loadInstructorRequests()" style="margin-top: 10px;">
+          <i class="fas fa-refresh"></i> Thử lại
         </button>
       </div>
     `;
@@ -506,512 +613,345 @@ async function loadCourseReview(statusFilter = null) {
 }
 
 /**
- * Handle status filter change
+ * Load instructor requests by status
  */
-window.handleStatusFilterChange = function(status) {
-  currentStatusFilter = status || null;
-  loadCourseReview(currentStatusFilter);
-};
+window.loadInstructorRequestsByStatus = async function(status) {
+  const content = document.getElementById('instructor-requests-content');
+  if (!content) return;
 
-/**
- * Handle approve course
- */
-window.handleApproveCourse = async function(courseId) {
-  const ghiChu = prompt('Ghi chú (tùy chọn):');
-  if (ghiChu === null) {
-    return; // User cancelled
+  // Update active filter button
+  document.querySelectorAll('#instructor-requests-content .btn').forEach(btn => {
+    if (btn.id && btn.id.startsWith('filter-')) {
+      btn.classList.remove('btn-primary');
+      btn.classList.add('btn-secondary');
+    }
+  });
+  
+  const filterMap = {
+    'Chờ duyệt': 'filter-pending',
+    'Đã duyệt': 'filter-approved',
+    'Từ chối': 'filter-rejected',
+    null: 'filter-all'
+  };
+  
+  const activeFilterId = filterMap[status];
+  if (activeFilterId) {
+    const activeBtn = document.getElementById(activeFilterId);
+    if (activeBtn) {
+      activeBtn.classList.remove('btn-secondary');
+      activeBtn.classList.add('btn-primary');
+    }
   }
 
-  if (!confirm('Bạn có chắc chắn muốn duyệt khóa học này?')) {
-    return;
-  }
+  content.innerHTML = '<div class="loading-spinner"></div> Đang tải...';
 
   try {
-    const response = await approveCourse(courseId, ghiChu || null);
-    if (response.success) {
-      alert('Duyệt khóa học thành công!');
-      loadCourseReview(currentStatusFilter);
-    } else {
-      alert('Lỗi: ' + (response.message || 'Không thể duyệt khóa học'));
+    const params = { pageNumber: 1, pageSize: 50 };
+    if (status) {
+      params.trangThai = status;
     }
-  } catch (error) {
-    alert('Lỗi: ' + (error.message || 'Có lỗi xảy ra khi duyệt khóa học'));
-  }
-};
-
-/**
- * Handle reject course
- */
-window.handleRejectCourse = async function(courseId) {
-  const lyDoTuChoi = prompt('Lý do từ chối (bắt buộc):');
-  if (!lyDoTuChoi || lyDoTuChoi.trim() === '') {
-    alert('Lý do từ chối không được để trống!');
-    return;
-  }
-
-  const ghiChu = prompt('Ghi chú (tùy chọn):');
-  if (ghiChu === null && lyDoTuChoi !== null) {
-    return; // User cancelled ghi chú but already entered reason
-  }
-
-  if (!confirm('Bạn có chắc chắn muốn từ chối khóa học này?')) {
-    return;
-  }
-
-  try {
-    const response = await rejectCourse(courseId, lyDoTuChoi.trim(), ghiChu || null);
-    if (response.success) {
-      alert('Từ chối khóa học thành công!');
-      loadCourseReview(currentStatusFilter);
-    } else {
-      alert('Lỗi: ' + (response.message || 'Không thể từ chối khóa học'));
-    }
-  } catch (error) {
-    alert('Lỗi: ' + (error.message || 'Có lỗi xảy ra khi từ chối khóa học'));
-  }
-};
-
-/**
- * Show rejection reason
- */
-window.showRejectionReason = function(reason) {
-  alert('Lý do từ chối:\n\n' + reason);
-};
-
-/**
- * Handle hide course by admin
- */
-window.handleHideCourseByAdmin = async function(courseId) {
-  const ghiChu = prompt('Ghi chú (tùy chọn):');
-  if (ghiChu === null) {
-    return; // User cancelled
-  }
-
-  if (!confirm('Bạn có chắc chắn muốn ẩn khóa học này?')) {
-    return;
-  }
-
-  try {
-    const response = await hideCourseByAdmin(courseId, ghiChu || null);
-    if (response.success) {
-      alert('Ẩn khóa học thành công!');
-      loadCourseReview(currentStatusFilter);
-    } else {
-      alert('Lỗi: ' + (response.message || 'Không thể ẩn khóa học'));
-    }
-  } catch (error) {
-    alert('Lỗi: ' + (error.message || 'Có lỗi xảy ra khi ẩn khóa học'));
-  }
-};
-
-/**
- * Handle unhide course by admin
- */
-window.handleUnhideCourseByAdmin = async function(courseId) {
-  const ghiChu = prompt('Ghi chú (tùy chọn):');
-  if (ghiChu === null) {
-    return; // User cancelled
-  }
-
-  if (!confirm('Bạn có chắc chắn muốn bỏ ẩn khóa học này? Khóa học sẽ được hiển thị lại công khai.')) {
-    return;
-  }
-
-  try {
-    const response = await unhideCourseByAdmin(courseId, ghiChu || null);
-    if (response.success) {
-      alert('Bỏ ẩn khóa học thành công!');
-      loadCourseReview(currentStatusFilter);
-    } else {
-      alert('Lỗi: ' + (response.message || 'Không thể bỏ ẩn khóa học'));
-    }
-  } catch (error) {
-    alert('Lỗi: ' + (error.message || 'Có lỗi xảy ra khi bỏ ẩn khóa học'));
-  }
-};
-
-/**
- * Show course detail modal (read-only)
- */
-window.showCourseDetailModal = async function(courseId) {
-  try {
-    // Show loading
-    const loadingModal = new Modal({
-      id: 'course-detail-loading',
-      title: 'Đang tải...',
-      content: '<div class="loading-spinner"></div>',
-      size: 'small'
-    });
-    const modalRoot = document.getElementById('modal-root');
-    if (modalRoot) {
-      modalRoot.innerHTML = loadingModal.render();
-      loadingModal.attachEventListeners();
-      loadingModal.open();
-    }
-
-    // Load course data using admin/reviewer endpoint
-    const courseResponse = await getCourseForReview(courseId);
     
-    // Close loading modal
-    loadingModal.close();
-    loadingModal.destroy();
-
-    if (!courseResponse || !courseResponse.success || !courseResponse.data) {
-      alert('Không thể tải thông tin khóa học');
-      return;
-    }
-
-    const courseData = courseResponse.data;
-    const course = {
-      id: courseId,
-      tenKhoaHoc: courseData.tenKhoaHoc,
-      moTaNgan: courseData.moTaNgan || '',
-      moTaChiTiet: courseData.moTaChiTiet || '',
-      giaBan: courseData.giaBan || 0,
-      mucDo: courseData.mucDo || 'N/A',
-      idDanhMuc: courseData.idDanhMuc,
-      tenDanhMuc: 'N/A',
-      yeuCauTruoc: courseData.yeuCauTruoc || '',
-      hocDuoc: courseData.hocDuoc || '',
-      giangVien: null,
-      videoGioiThieu: courseData.videoGioiThieu || null
-    };
-
-    // Curriculum is included in response
-    const curriculum = courseData.chuongs && courseData.chuongs.length > 0 
-      ? { chuongs: courseData.chuongs } 
-      : null;
-
-    // Load category name
-    if (course.idDanhMuc) {
-      try {
-        const categoryResponse = await getCategoryById(course.idDanhMuc);
-        if (categoryResponse && categoryResponse.success && categoryResponse.data) {
-          course.tenDanhMuc = categoryResponse.data.tenDanhMuc || 'N/A';
-        }
-      } catch (error) {
-        course.tenDanhMuc = 'N/A';
-      }
-    }
-
-    // Format price
-    const formatPrice = (price) => {
-      if (!price || price === 0) return 'Miễn phí';
-      return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
-    };
-
-    // Format duration (seconds to HH:MM:SS or MM:SS)
-    const formatDuration = (seconds) => {
-      if (!seconds || seconds === 0) return '';
-      const hours = Math.floor(seconds / 3600);
-      const minutes = Math.floor((seconds % 3600) / 60);
-      const secs = seconds % 60;
+    const response = await getInstructorRequests(params);
+    
+    if (response.success && response.data) {
+      const requests = response.data.items || [];
+      const totalCount = response.data.totalCount || 0;
       
-      if (hours > 0) {
-        return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-      }
-      return `${minutes}:${secs.toString().padStart(2, '0')}`;
-    };
-
-    // Generate curriculum HTML with video players
-    let curriculumHtml = '';
-    if (curriculum && curriculum.chuongs && curriculum.chuongs.length > 0) {
-      curriculumHtml = `
-        <div class="form-section">
-          <h3 class="form-section-title">Nội dung khóa học</h3>
-          ${curriculum.chuongs.map((chuong, chuongIndex) => `
-            <div style="margin-bottom: 24px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
-              <h4 style="margin: 0 0 12px 0; color: #1e293b; font-size: 18px;">
-                Chương ${chuongIndex + 1}: ${chuong.tenChuong || 'N/A'}
-              </h4>
-              ${chuong.moTa ? `<p style="margin: 0 0 16px 0; color: #64748b; font-size: 14px;">${chuong.moTa}</p>` : ''}
-              ${chuong.baiGiangs && chuong.baiGiangs.length > 0 ? `
-                <div style="margin-left: 0;">
-                  ${chuong.baiGiangs.map((baiGiang, baiGiangIndex) => {
-                    const videoId = `video-${courseId}-${chuongIndex}-${baiGiangIndex}`;
-                    
-                    // Build video URL
-                    let videoUrl = null;
-                    if (baiGiang.duongDanVideo) {
-                      const rawPath = baiGiang.duongDanVideo;
-                      
-                      // Debug: Log video URL info
-                      console.log(`[VIDEO DEBUG] Bài giảng ${baiGiangIndex + 1} (${baiGiang.tieuDe}):`, {
-                        rawPath: rawPath,
-                        pathType: typeof rawPath,
-                        startsWithHttp: rawPath.startsWith('http'),
-                        startsWithSlash: rawPath.startsWith('/')
-                      });
-                      
-                      // Nếu đã là full URL
-                      if (rawPath.startsWith('http://') || rawPath.startsWith('https://')) {
-                        videoUrl = rawPath;
-                      } 
-                      // Nếu là relative path (bắt đầu bằng /)
-                      else if (rawPath.startsWith('/')) {
-                        // Static files được serve từ root, không phải từ /api/
-                        // API_BASE_URL = "http://localhost:5228/api/"
-                        // Cần: "http://localhost:5228/uploads/..."
-                        const baseUrl = API_BASE_URL.replace('/api/', '');
-                        videoUrl = `${baseUrl}${rawPath}`;
-                      }
-                      // Nếu không có / đầu tiên
-                      else {
-                        const baseUrl = API_BASE_URL.replace('/api/', '');
-                        videoUrl = `${baseUrl}/${rawPath}`;
-                      }
-                      
-                      console.log(`[VIDEO DEBUG] Final video URL:`, videoUrl);
-                      console.log(`[VIDEO DEBUG] Testing URL accessibility...`);
-                      
-                      // Test URL accessibility
-                      fetch(videoUrl, { method: 'HEAD' })
-                        .then(response => {
-                          console.log(`[VIDEO DEBUG] URL test result:`, {
-                            url: videoUrl,
-                            status: response.status,
-                            statusText: response.statusText,
-                            ok: response.ok,
-                            headers: {
-                              contentType: response.headers.get('content-type'),
-                              contentLength: response.headers.get('content-length')
-                            }
-                          });
-                        })
-                        .catch(error => {
-                          console.error(`[VIDEO DEBUG] URL test error:`, {
-                            url: videoUrl,
-                            error: error.message
-                          });
-                        });
-                    } else {
-                      console.warn(`[VIDEO DEBUG] Bài giảng ${baiGiangIndex + 1} không có duongDanVideo`);
-                    }
-                    
-                    return `
-                    <div style="padding: 12px 0; border-bottom: 1px solid #f1f5f9;">
-                      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                        <i class="fas fa-play-circle" style="color: #3b82f6;"></i>
-                        <span style="font-weight: 500;">Bài ${baiGiangIndex + 1}: ${baiGiang.tieuDe || 'N/A'}</span>
-                        ${baiGiang.mienPhiXem ? '<span style="color: #10b981; font-size: 12px;">(Miễn phí)</span>' : ''}
-                      </div>
-                      ${baiGiang.moTa ? `<p style="margin: 0 0 8px 28px; color: #64748b; font-size: 13px;">${baiGiang.moTa}</p>` : ''}
-                      ${videoUrl ? `
-                        <div style="margin: 12px 0 0 28px; max-width: 800px;">
-                          <div style="width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 4px; overflow: hidden; position: relative;">
-                            <video 
-                              id="${videoId}"
-                              controls 
-                              style="width: 100%; height: 100%; object-fit: contain;"
-                              preload="metadata"
-                              onerror="console.error('[VIDEO ERROR] Video load failed:', {videoId: '${videoId}', url: '${videoUrl}', error: event.target.error})"
-                              onloadstart="console.log('[VIDEO] Loading started:', '${videoId}')"
-                              oncanplay="console.log('[VIDEO] Can play:', '${videoId}')"
-                              onerror="(function(e) { 
-                                console.error('[VIDEO ERROR]', {
-                                  videoId: '${videoId}',
-                                  url: '${videoUrl}',
-                                  error: e.target.error,
-                                  networkState: e.target.networkState,
-                                  readyState: e.target.readyState
-                                });
-                                const errorDiv = document.createElement('div');
-                                errorDiv.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; text-align: center; padding: 16px; background: rgba(0,0,0,0.8); border-radius: 4px;';
-                                errorDiv.innerHTML = '<i class=\"fas fa-exclamation-triangle\"></i><br>Không thể tải video<br><small style=\"font-size: 11px;\">' + '${videoUrl}' + '</small>';
-                                e.target.parentElement.appendChild(errorDiv);
-                              })(event)"
-                            >
-                              <source src="${videoUrl}" type="video/mp4">
-                              <source src="${videoUrl}" type="video/webm">
-                              <source src="${videoUrl}" type="video/ogg">
-                              Trình duyệt của bạn không hỗ trợ video.
-                            </video>
-                          </div>
-                          <p style="margin: 4px 0 0 0; color: #64748b; font-size: 12px;">
-                            <i class="fas fa-video"></i> Video bài giảng
-                            ${baiGiang.thoiLuong ? ` • ${formatDuration(baiGiang.thoiLuong)}` : ''}
-                            <br><small style="color: #94a3b8; font-size: 10px; word-break: break-all;">${videoUrl}</small>
-                          </p>
-                        </div>
-                      ` : `
-                        <div style="margin: 12px 0 0 28px; padding: 12px; background: #fef3c7; border-radius: 4px; color: #92400e; font-size: 13px;">
-                          <i class="fas fa-exclamation-triangle"></i> Chưa có video cho bài giảng này
-                        </div>
-                      `}
-                    </div>
-                  `;
-                  }).join('')}
-                </div>
-              ` : '<p style="color: #94a3b8; font-size: 13px; margin-left: 16px;">Chưa có bài giảng</p>'}
-            </div>
-          `).join('')}
+      // Filter buttons
+      const filterButtons = `
+        <div style="margin-bottom: 20px; display: flex; gap: 12px; flex-wrap: wrap;">
+          <button class="btn ${status === 'Chờ duyệt' ? 'btn-primary' : 'btn-secondary'}" onclick="loadInstructorRequestsByStatus('Chờ duyệt')" id="filter-pending">
+            <i class="fas fa-clock"></i> Chờ duyệt
+          </button>
+          <button class="btn ${status === 'Đã duyệt' ? 'btn-primary' : 'btn-secondary'}" onclick="loadInstructorRequestsByStatus('Đã duyệt')" id="filter-approved">
+            <i class="fas fa-check"></i> Đã duyệt
+          </button>
+          <button class="btn ${status === 'Từ chối' ? 'btn-primary' : 'btn-secondary'}" onclick="loadInstructorRequestsByStatus('Từ chối')" id="filter-rejected">
+            <i class="fas fa-times"></i> Đã từ chối
+          </button>
+          <button class="btn ${status === null ? 'btn-primary' : 'btn-secondary'}" onclick="loadInstructorRequestsByStatus(null)" id="filter-all">
+            <i class="fas fa-list"></i> Tất cả
+          </button>
         </div>
+      `;
+      
+      if (requests.length === 0) {
+        content.innerHTML = filterButtons + `
+          <div class="empty-state">
+            <div class="empty-state-icon">👨‍🏫</div>
+            <div class="empty-state-text">Không có yêu cầu đăng ký giảng viên nào</div>
+            <div class="empty-state-subtext">${status ? `Không có yêu cầu ở trạng thái "${status}"` : 'Tất cả yêu cầu đã được xử lý'}</div>
+          </div>
+        `;
+        return;
+      }
+      
+      content.innerHTML = filterButtons + `
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Họ tên</th>
+                <th>Email</th>
+                <th>Ngày gửi</th>
+                <th>Trạng thái</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${requests.map(request => {
+                const requestStatus = request.trangThai || request.TrangThai || 'Chờ duyệt';
+                const ngayGui = request.ngayGui || request.NgayGui;
+                const formattedDate = ngayGui ? new Date(ngayGui).toLocaleDateString('vi-VN') : 'N/A';
+                
+                let statusBadge = '';
+                if (requestStatus === 'Chờ duyệt' || requestStatus === 'Cho duyet') {
+                  statusBadge = '<span class="role-badge" style="background: #fef3c7; color: #92400e;">⏳ Chờ duyệt</span>';
+                } else if (requestStatus === 'Đã duyệt' || requestStatus === 'Da duyet') {
+                  statusBadge = '<span class="role-badge" style="background: #d1fae5; color: #065f46;">✅ Đã duyệt</span>';
+                } else if (requestStatus === 'Từ chối' || requestStatus === 'Tu choi') {
+                  statusBadge = '<span class="role-badge" style="background: #fee2e2; color: #991b1b;">❌ Từ chối</span>';
+                }
+                
+                const canApprove = requestStatus === 'Chờ duyệt' || requestStatus === 'Cho duyet';
+                const canReject = requestStatus === 'Chờ duyệt' || requestStatus === 'Cho duyet';
+                
+                return `
+                  <tr>
+                    <td>${request.id || request.Id}</td>
+                    <td><strong>${request.hoTen || request.HoTen || 'N/A'}</strong></td>
+                    <td>${request.email || request.Email || 'N/A'}</td>
+                    <td>${formattedDate}</td>
+                    <td>${statusBadge}</td>
+                    <td>
+                      <div class="actions" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn btn-sm btn-info" onclick="window.viewInstructorRequestDetail(${request.id || request.Id})">
+                          <i class="fas fa-eye"></i> Chi tiết
+                        </button>
+                        ${canApprove ? `
+                          <button class="btn btn-sm btn-success" onclick="window.approveInstructorRequest(${request.id || request.Id})">
+                            <i class="fas fa-check"></i> Duyệt
+                          </button>
+                        ` : ''}
+                        ${canReject ? `
+                          <button class="btn btn-sm btn-danger" onclick="window.rejectInstructorRequest(${request.id || request.Id})">
+                            <i class="fas fa-times"></i> Từ chối
+                          </button>
+                        ` : ''}
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+        ${totalCount > requests.length ? `
+          <div style="margin-top: 20px; text-align: center; color: #64748b;">
+            Hiển thị ${requests.length} / ${totalCount} yêu cầu
+          </div>
+        ` : ''}
       `;
     } else {
-      curriculumHtml = '<p style="color: #94a3b8;">Chưa có nội dung khóa học</p>';
-    }
-
-    // Generate video introduction if available
-    let videoIntroHtml = '';
-    if (course.videoGioiThieu) {
-      console.log('[VIDEO DEBUG] Video giới thiệu:', {
-        raw: course.videoGioiThieu,
-        startsWithHttp: course.videoGioiThieu.startsWith('http'),
-        startsWithSlash: course.videoGioiThieu.startsWith('/')
-      });
-      
-      let introVideoUrl = null;
-      const rawPath = course.videoGioiThieu;
-      if (rawPath.startsWith('http://') || rawPath.startsWith('https://')) {
-        introVideoUrl = rawPath;
-      } else if (rawPath.startsWith('/')) {
-        const baseUrl = API_BASE_URL.replace('/api/', '');
-        introVideoUrl = `${baseUrl}${rawPath}`;
-      } else {
-        const baseUrl = API_BASE_URL.replace('/api/', '');
-        introVideoUrl = `${baseUrl}/${rawPath}`;
-      }
-      
-      console.log('[VIDEO DEBUG] Final intro video URL:', introVideoUrl);
-      
-      videoIntroHtml = `
-        <div class="form-section" style="margin-bottom: 24px;">
-          <h3 class="form-section-title">Video giới thiệu khóa học</h3>
-          <div style="width: 100%; max-width: 800px; aspect-ratio: 16/9; background: #000; border-radius: 8px; overflow: hidden; margin-top: 12px;">
-            <video 
-              id="intro-video-${courseId}"
-              controls 
-              style="width: 100%; height: 100%; object-fit: contain;"
-              preload="metadata"
-            >
-              <source src="${introVideoUrl}" type="video/mp4">
-              <source src="${introVideoUrl}" type="video/webm">
-              <source src="${introVideoUrl}" type="video/ogg">
-              Trình duyệt của bạn không hỗ trợ video.
-            </video>
-          </div>
+      content.innerHTML = `
+        <div style="padding: 20px; background: #fee2e2; border-radius: 8px; border: 1px solid #fca5a5;">
+          <h3 style="color: #991b1b; margin-bottom: 10px;">❌ Lỗi khi tải danh sách</h3>
+          <p style="color: #7f1d1d;">Không thể lấy dữ liệu từ server. Vui lòng thử lại.</p>
+          <button class="btn btn-primary" onclick="loadInstructorRequestsByStatus('${status || ''}')" style="margin-top: 10px;">
+            <i class="fas fa-refresh"></i> Thử lại
+          </button>
         </div>
       `;
     }
+  } catch (error) {
+    console.error('Error loading instructor requests:', error);
+    const errorMessage = error.message || 'Có lỗi xảy ra khi tải danh sách yêu cầu đăng ký giảng viên';
+    content.innerHTML = `
+      <div style="padding: 20px; background: #fee2e2; border-radius: 8px; border: 1px solid #fca5a5;">
+        <h3 style="color: #991b1b; margin-bottom: 10px;">❌ Lỗi khi tải danh sách</h3>
+        <p style="color: #7f1d1d; margin-bottom: 10px;">${errorMessage}</p>
+        <button class="btn btn-primary" onclick="loadInstructorRequestsByStatus('${status || ''}')" style="margin-top: 10px;">
+          <i class="fas fa-refresh"></i> Thử lại
+        </button>
+      </div>
+    `;
+  }
+};
 
-    // Generate modal content
-    const modalContent = `
-      <div style="max-height: 70vh; overflow-y: auto;">
-        ${videoIntroHtml}
-        <div class="form-section">
-          <h3 class="form-section-title">Thông tin cơ bản</h3>
+/**
+ * View instructor request detail
+ */
+window.viewInstructorRequestDetail = async function(requestId) {
+  try {
+    const response = await getInstructorRequestById(requestId);
+    
+    if (response.success && response.data) {
+      const request = response.data;
+      const status = request.trangThai || request.TrangThai || 'Chờ duyệt';
+      const chungChiPath = request.chungChiPath || request.ChungChiPath || '';
+      const API_BASE = 'http://localhost:5228';
+      const chungChiUrl = chungChiPath.startsWith('http') ? chungChiPath : `${API_BASE}${chungChiPath}`;
+      
+      const canApprove = status === 'Chờ duyệt' || status === 'Cho duyet';
+      const canReject = status === 'Chờ duyệt' || status === 'Cho duyet';
+      
+      const modalContent = `
+        <div style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+          <h2 style="margin-bottom: 20px; color: #1e293b;">Chi tiết yêu cầu đăng ký làm giảng viên</h2>
           
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-            <div>
-              <label style="display: block; font-weight: 600; margin-bottom: 4px; color: #475569;">Danh mục</label>
-              <p style="margin: 0; color: #1e293b;">${course.tenDanhMuc || 'N/A'}</p>
-            </div>
-            <div>
-              <label style="display: block; font-weight: 600; margin-bottom: 4px; color: #475569;">Mức độ</label>
-              <p style="margin: 0; color: #1e293b;">${course.mucDo || 'N/A'}</p>
-            </div>
-          </div>
-
-          <div style="margin-bottom: 16px;">
-            <label style="display: block; font-weight: 600; margin-bottom: 4px; color: #475569;">Tên khóa học</label>
-            <p style="margin: 0; color: #1e293b; font-size: 18px; font-weight: 500;">${course.tenKhoaHoc || 'N/A'}</p>
-          </div>
-
-          ${course.moTaNgan ? `
-            <div style="margin-bottom: 16px;">
-              <label style="display: block; font-weight: 600; margin-bottom: 4px; color: #475569;">Mô tả ngắn</label>
-              <p style="margin: 0; color: #1e293b;">${course.moTaNgan}</p>
-            </div>
-          ` : ''}
-
-          ${course.moTaChiTiet ? `
-            <div style="margin-bottom: 16px;">
-              <label style="display: block; font-weight: 600; margin-bottom: 4px; color: #475569;">Mô tả chi tiết</label>
-              <p style="margin: 0; color: #1e293b; white-space: pre-wrap;">${course.moTaChiTiet}</p>
-            </div>
-          ` : ''}
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-            <div>
-              <label style="display: block; font-weight: 600; margin-bottom: 4px; color: #475569;">Giá bán</label>
-              <p style="margin: 0; color: #1e293b; font-weight: 600; font-size: 18px;">${formatPrice(course.giaBan)}</p>
-            </div>
-            ${course.giangVien ? `
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="margin-bottom: 15px; color: #334155;">Thông tin yêu cầu</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
               <div>
-                <label style="display: block; font-weight: 600; margin-bottom: 4px; color: #475569;">Giảng viên</label>
-                <p style="margin: 0; color: #1e293b;">${course.giangVien.hoTen || 'N/A'}</p>
+                <strong>ID yêu cầu:</strong> ${request.id || request.Id}
+              </div>
+              <div>
+                <strong>Trạng thái:</strong> 
+                ${status === 'Chờ duyệt' ? '<span style="color: #92400e;">⏳ Chờ duyệt</span>' : ''}
+                ${status === 'Đã duyệt' ? '<span style="color: #065f46;">✅ Đã duyệt</span>' : ''}
+                ${status === 'Từ chối' ? '<span style="color: #991b1b;">❌ Từ chối</span>' : ''}
+              </div>
+              <div>
+                <strong>Ngày gửi:</strong> ${request.ngayGui || request.NgayGui ? new Date(request.ngayGui || request.NgayGui).toLocaleString('vi-VN') : 'N/A'}
+              </div>
+              ${request.ngayDuyet || request.NgayDuyet ? `
+                <div>
+                  <strong>Ngày duyệt:</strong> ${new Date(request.ngayDuyet || request.NgayDuyet).toLocaleString('vi-VN')}
+                </div>
+              ` : ''}
+              ${request.tenNguoiDuyet || request.TenNguoiDuyet ? `
+                <div>
+                  <strong>Người duyệt:</strong> ${request.tenNguoiDuyet || request.TenNguoiDuyet}
+                </div>
+              ` : ''}
+            </div>
+            ${request.lyDoTuChoi || request.LyDoTuChoi ? `
+              <div style="margin-top: 15px; padding: 12px; background: #fee2e2; border-radius: 6px;">
+                <strong>Lý do từ chối:</strong> ${request.lyDoTuChoi || request.LyDoTuChoi}
               </div>
             ` : ''}
           </div>
-
-          ${course.yeuCauTruoc ? `
-            <div style="margin-bottom: 16px;">
-              <label style="display: block; font-weight: 600; margin-bottom: 4px; color: #475569;">Yêu cầu trước</label>
-              <p style="margin: 0; color: #1e293b; white-space: pre-wrap;">${course.yeuCauTruoc}</p>
+          
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="margin-bottom: 15px; color: #334155;">Thông tin học viên</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+              <div>
+                <strong>Họ tên:</strong> ${request.hoTen || request.HoTen || 'N/A'}
+              </div>
+              <div>
+                <strong>Email:</strong> ${request.email || request.Email || 'N/A'}
+              </div>
+              <div>
+                <strong>ID học viên:</strong> ${request.idHocVien || request.IdHocVien || 'N/A'}
+              </div>
+            </div>
+          </div>
+          
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="margin-bottom: 15px; color: #334155;">Chứng chỉ</h3>
+            ${chungChiPath ? `
+              <div style="margin-top: 10px;">
+                ${chungChiPath.toLowerCase().endsWith('.pdf') ? `
+                  <a href="${chungChiUrl}" target="_blank" class="btn btn-info" style="display: inline-block; margin-bottom: 10px;">
+                    <i class="fas fa-file-pdf"></i> Xem chứng chỉ (PDF)
+                  </a>
+                ` : `
+                  <div style="margin-bottom: 10px;">
+                    <img src="${chungChiUrl}" alt="Chứng chỉ" style="max-width: 100%; border-radius: 8px; border: 1px solid #ddd;">
+                  </div>
+                  <a href="${chungChiUrl}" target="_blank" class="btn btn-info" style="display: inline-block;">
+                    <i class="fas fa-external-link-alt"></i> Mở ảnh trong tab mới
+                  </a>
+                `}
+              </div>
+            ` : '<p style="color: #94a3b8;">Chưa có chứng chỉ</p>'}
+          </div>
+          
+          ${request.thongTinBoSung || request.ThongTinBoSung ? `
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+              <h3 style="margin-bottom: 15px; color: #334155;">Thông tin bổ sung</h3>
+              <div style="padding: 12px; background: white; border-radius: 6px; max-height: 200px; overflow-y: auto;">
+                ${request.thongTinBoSung || request.ThongTinBoSung}
+              </div>
             </div>
           ` : ''}
-
-          ${course.hocDuoc ? `
-            <div style="margin-bottom: 16px;">
-              <label style="display: block; font-weight: 600; margin-bottom: 4px; color: #475569;">Bạn sẽ học được gì</label>
-              <p style="margin: 0; color: #1e293b; white-space: pre-wrap;">${course.hocDuoc}</p>
-            </div>
-          ` : ''}
-
-          ${course.diemDanhGia ? `
-            <div style="margin-bottom: 16px;">
-              <label style="display: block; font-weight: 600; margin-bottom: 4px; color: #475569;">Đánh giá</label>
-              <p style="margin: 0; color: #1e293b;">
-                ${course.diemDanhGia.toFixed(1)} ⭐ (${course.soLuongDanhGia || 0} đánh giá)
-              </p>
-            </div>
-          ` : ''}
-
-          ${course.soLuongHocVien !== undefined ? `
-            <div style="margin-bottom: 16px;">
-              <label style="display: block; font-weight: 600; margin-bottom: 4px; color: #475569;">Số lượng học viên</label>
-              <p style="margin: 0; color: #1e293b;">${course.soLuongHocVien || 0} học viên</p>
-            </div>
-          ` : ''}
+          
+          <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px;">
+            ${canApprove ? `
+              <button class="btn btn-success" onclick="window.approveInstructorRequest(${request.id || request.Id}); Modal.close();">
+                <i class="fas fa-check"></i> Duyệt yêu cầu
+              </button>
+            ` : ''}
+            ${canReject ? `
+              <button class="btn btn-danger" onclick="window.rejectInstructorRequest(${request.id || request.Id}); Modal.close();">
+                <i class="fas fa-times"></i> Từ chối
+              </button>
+            ` : ''}
+            <button class="btn btn-secondary" onclick="Modal.close()">
+              Đóng
+            </button>
+          </div>
         </div>
-
-        ${curriculumHtml}
-      </div>
-    `;
-
-    // Create and show modal
-    const detailModal = new Modal({
-      id: 'course-detail-modal',
-      title: 'Chi tiết khóa học',
-      content: modalContent,
-      size: 'large',
-      footer: `
-        <button type="button" class="btn btn-secondary" onclick="window.closeCourseDetailModal()">Đóng</button>
-      `
-    });
-
-    if (modalRoot) {
-      modalRoot.innerHTML = detailModal.render();
-      detailModal.attachEventListeners();
-      detailModal.open();
+      `;
+      
+      Modal.show({
+        title: 'Chi tiết yêu cầu đăng ký làm giảng viên',
+        content: modalContent,
+        size: 'large'
+      });
+    } else {
+      alert('Không thể tải chi tiết yêu cầu');
     }
-
-    // Store modal reference for close function
-    window.currentCourseDetailModal = detailModal;
   } catch (error) {
-    console.error('Error loading course detail:', error);
-    alert('Lỗi khi tải thông tin khóa học: ' + (error.message || 'Lỗi không xác định'));
+    console.error('Error loading instructor request detail:', error);
+    alert('Lỗi: ' + (error.message || 'Có lỗi xảy ra khi tải chi tiết yêu cầu'));
   }
 };
 
 /**
- * Close course detail modal
+ * Approve instructor request
  */
-window.closeCourseDetailModal = function() {
-  if (window.currentCourseDetailModal) {
-    window.currentCourseDetailModal.close();
-    window.currentCourseDetailModal.destroy();
-    window.currentCourseDetailModal = null;
+window.approveInstructorRequest = async function(requestId) {
+  if (!confirm('Bạn có chắc chắn muốn duyệt yêu cầu đăng ký làm giảng viên này?\n\nHọc viên sẽ được cấp quyền giảng viên và có thể tạo khóa học.')) {
+    return;
+  }
+  
+  try {
+    await approveRequest(requestId);
+    alert('Duyệt yêu cầu thành công! Học viên đã được cấp quyền giảng viên.');
+    loadInstructorRequests();
+    if (Modal.isOpen()) {
+      Modal.close();
+    }
+  } catch (error) {
+    alert('Lỗi: ' + (error.message || 'Có lỗi xảy ra khi duyệt yêu cầu'));
+  }
+};
+
+/**
+ * Reject instructor request
+ */
+window.rejectInstructorRequest = async function(requestId) {
+  const lyDoTuChoi = prompt('Nhập lý do từ chối (bắt buộc):');
+  if (!lyDoTuChoi || !lyDoTuChoi.trim()) {
+    alert('Lý do từ chối là bắt buộc');
+    return;
+  }
+  
+  if (!confirm('Bạn có chắc chắn muốn từ chối yêu cầu này?\n\nHọc viên sẽ nhận được thông báo với lý do từ chối.')) {
+    return;
+  }
+  
+  try {
+    await rejectRequest(requestId, lyDoTuChoi.trim());
+    alert('Từ chối yêu cầu thành công!');
+    loadInstructorRequests();
+    if (Modal.isOpen()) {
+      Modal.close();
+    }
+  } catch (error) {
+    alert('Lỗi: ' + (error.message || 'Có lỗi xảy ra khi từ chối yêu cầu'));
   }
 };
 
@@ -1026,21 +966,32 @@ async function loadCategories() {
 
   try {
     // Use /all endpoint for admin to get all categories including inactive
-    const categoriesResponse = await getCategories(1, 100);
+    const categoriesResponse = await getAllCategoriesAdmin();
     
     if (categoriesResponse.success && categoriesResponse.data) {
-      const categories = categoriesResponse.data.items || [];
+      const categories = Array.isArray(categoriesResponse.data) ? categoriesResponse.data : [];
+      
+      // Sort: active first, then by ID
+      const sortedCategories = [...categories].sort((a, b) => {
+        const aActive = a.trangThai !== false && a.trangThai !== null;
+        const bActive = b.trangThai !== false && b.trangThai !== null;
+        if (aActive !== bActive) {
+          return aActive ? -1 : 1; // Active first
+        }
+        return (a.id || a.Id || 0) - (b.id || b.Id || 0);
+      });
       
       content.innerHTML = `
-        <div style="margin-bottom: 20px;">
-          <button class="btn btn-primary" onclick="alert('Tính năng thêm danh mục sẽ được thêm sau')">
+        <div style="margin-bottom: 20px; display: flex; gap: 12px;">
+          <button class="btn btn-primary" onclick="window.showAddCategoryModal()">
             <i class="fas fa-plus"></i> Thêm danh mục mới
           </button>
         </div>
-        ${categories.length === 0 ? `
+        ${sortedCategories.length === 0 ? `
           <div class="empty-state">
             <div class="empty-state-icon">📁</div>
             <div class="empty-state-text">Chưa có danh mục nào</div>
+            <div class="empty-state-subtext">Hãy thêm danh mục đầu tiên!</div>
           </div>
         ` : `
           <div class="table-container">
@@ -1050,24 +1001,47 @@ async function loadCategories() {
                   <th>ID</th>
                   <th>Tên danh mục</th>
                   <th>Mô tả</th>
+                  <th>Số khóa học</th>
                   <th>Trạng thái</th>
                   <th>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
-                ${categories.map(category => {
-                  const statusBadge = category.trangThai 
-                    ? '<span class="role-badge role-user">Hoạt động</span>'
-                    : '<span class="role-badge role-admin">Khóa</span>';
+                ${sortedCategories.map(category => {
+                  const isActive = category.trangThai !== false && category.trangThai !== null;
+                  const statusBadge = isActive
+                    ? '<span class="role-badge" style="background: #d1fae5; color: #065f46;">🟢 Hoạt động</span>'
+                    : '<span class="role-badge" style="background: #fee2e2; color: #991b1b;">🔴 Đã ẩn</span>';
+                  
+                  const categoryId = category.id || category.Id;
+                  const categoryName = category.tenDanhMuc || category.TenDanhMuc || 'N/A';
+                  const soKhoaHoc = category.soKhoaHoc !== undefined ? category.soKhoaHoc : (category.SoKhoaHoc !== undefined ? category.SoKhoaHoc : 0);
                   
                   return `
-                    <tr>
-                      <td>${category.id}</td>
-                      <td>${category.tenDanhMuc || 'N/A'}</td>
-                      <td>${category.moTa || 'N/A'}</td>
+                    <tr style="${!isActive ? 'opacity: 0.7;' : ''}">
+                      <td>${categoryId}</td>
+                      <td><strong>${categoryName}</strong></td>
+                      <td>${category.moTa || category.MoTa || '<span style="color: #94a3b8;">Chưa có mô tả</span>'}</td>
+                      <td>
+                        <span style="font-weight: 600; color: #3b82f6;">${soKhoaHoc}</span>
+                        <span style="color: #94a3b8; font-size: 12px;"> khóa học</span>
+                      </td>
                       <td>${statusBadge}</td>
                       <td>
-                        <button class="btn btn-sm btn-secondary" onclick="alert('Tính năng sửa danh mục sẽ được thêm sau')">Sửa</button>
+                        <div class="actions" style="display: flex; gap: 8px;">
+                          <button class="btn btn-sm btn-secondary" onclick="window.showEditCategoryModal(${categoryId})">
+                            <i class="fas fa-edit"></i> Sửa
+                          </button>
+                          ${isActive ? `
+                            <button class="btn btn-sm btn-warning" onclick="window.handleHideCategory(${categoryId}, '${categoryName.replace(/'/g, "\\'")}')">
+                              <i class="fas fa-eye-slash"></i> Ẩn
+                            </button>
+                          ` : `
+                            <button class="btn btn-sm btn-success" onclick="window.handleRestoreCategory(${categoryId}, '${categoryName.replace(/'/g, "\\'")}')">
+                              <i class="fas fa-undo"></i> Khôi phục
+                            </button>
+                          `}
+                        </div>
                       </td>
                     </tr>
                   `;

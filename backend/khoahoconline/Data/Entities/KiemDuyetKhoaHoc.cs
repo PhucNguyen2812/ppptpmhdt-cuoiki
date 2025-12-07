@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
@@ -14,14 +13,10 @@ public partial class KiemDuyetKhoaHoc
 
     public int IdKhoaHoc { get; set; }
 
-    public int PhienBan { get; set; }
+    public int IdNguoiGui { get; set; } // ID giảng viên gửi yêu cầu
 
     [StringLength(50)]
-    public string TrangThaiKiemDuyet { get; set; } = null!;
-
-    public int IdNguoiGui { get; set; }
-
-    public int? IdNguoiKiemDuyet { get; set; }
+    public string TrangThai { get; set; } = null!; // Chờ duyệt/Đã duyệt/Từ chối
 
     [StringLength(500)]
     public string? LyDoTuChoi { get; set; }
@@ -30,12 +25,12 @@ public partial class KiemDuyetKhoaHoc
     public DateTime NgayGui { get; set; }
 
     [Column(TypeName = "datetime")]
-    public DateTime? NgayKiemDuyet { get; set; }
+    public DateTime? NgayDuyet { get; set; }
 
-    public string? NoiDungThayDoi { get; set; }
+    public int? IdNguoiDuyet { get; set; } // ID admin/kiểm duyệt viên duyệt
 
-    [StringLength(500)]
-    public string? GhiChu { get; set; }
+    [StringLength(1000)]
+    public string? GhiChu { get; set; } // Ghi chú của người duyệt
 
     [ForeignKey("IdKhoaHoc")]
     [InverseProperty("KiemDuyetKhoaHocs")]
@@ -45,10 +40,11 @@ public partial class KiemDuyetKhoaHoc
     [InverseProperty("KiemDuyetKhoaHocGui")]
     public virtual NguoiDung IdNguoiGuiNavigation { get; set; } = null!;
 
-    [ForeignKey("IdNguoiKiemDuyet")]
-    [InverseProperty("KiemDuyetKhoaHocKiemDuyet")]
-    public virtual NguoiDung? IdNguoiKiemDuyetNavigation { get; set; }
+    [ForeignKey("IdNguoiDuyet")]
+    [InverseProperty("KiemDuyetKhoaHocDuyet")]
+    public virtual NguoiDung? IdNguoiDuyetNavigation { get; set; }
 }
+
 
 
 

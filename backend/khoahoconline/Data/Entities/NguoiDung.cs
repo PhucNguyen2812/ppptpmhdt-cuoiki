@@ -80,9 +80,19 @@ public partial class NguoiDung
     [InverseProperty("IdHocVienNavigation")]
     public virtual ICollection<TienDoHocTap> TienDoHocTaps { get; set; } = new List<TienDoHocTap>();
 
+    [InverseProperty("IdNguoiDungNavigation")]
+    public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+
+    [InverseProperty("IdHocVienNavigation")]
+    public virtual ICollection<YeuCauDangKyGiangVien> YeuCauDangKyGiangViens { get; set; } = new List<YeuCauDangKyGiangVien>();
+
+    [InverseProperty("IdNguoiDuyetNavigation")]
+    public virtual ICollection<YeuCauDangKyGiangVien> YeuCauDangKyGiangVienDuyets { get; set; } = new List<YeuCauDangKyGiangVien>();
+
     [InverseProperty("IdNguoiGuiNavigation")]
     public virtual ICollection<KiemDuyetKhoaHoc> KiemDuyetKhoaHocGui { get; set; } = new List<KiemDuyetKhoaHoc>();
 
-    [InverseProperty("IdNguoiKiemDuyetNavigation")]
-    public virtual ICollection<KiemDuyetKhoaHoc> KiemDuyetKhoaHocKiemDuyet { get; set; } = new List<KiemDuyetKhoaHoc>();
+    [InverseProperty("IdNguoiDuyetNavigation")]
+    public virtual ICollection<KiemDuyetKhoaHoc> KiemDuyetKhoaHocDuyet { get; set; } = new List<KiemDuyetKhoaHoc>();
+
 }

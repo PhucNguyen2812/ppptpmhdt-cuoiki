@@ -113,7 +113,11 @@ namespace khoahoconline.Controllers
             }
 
             await _nguoiDungService.updateAsync(id, dto);
-            return NoContent();
+            
+            // Get updated user to return
+            var updatedUser = await _nguoiDungService.GetDetailByIdAsync(id);
+            var result = ApiResponse<NguoiDungDetailDto>.SuccessResponse(updatedUser, "Cập nhật người dùng thành công");
+            return Ok(result);
         }
 
         /// <summary>

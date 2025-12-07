@@ -5,6 +5,7 @@ import {
   getBestSellingCourses, 
   getNewestCourses 
 } from "../api/courseApi.js";
+import { getCartCount } from "../api/cartApi.js";
 import { 
   formatPrice, 
   getStars, 
@@ -15,6 +16,7 @@ import {
   getSearchUrl
 } from "../utils/courseHelper.js";
 import { DEFAULT_IMAGES } from "../config.js";
+import { initNotificationComponent } from "../components/NotificationComponent.js";
 
 // ===== DOM Elements =====
 const elements = {
@@ -49,10 +51,18 @@ const elements = {
 document.addEventListener('DOMContentLoaded', async () => {
   await initializeAuth();
   setupEventListeners();
+  await loadCartCount();
   loadCategories();
   loadFeaturedCourses();
   loadBestSellingCourses();
   loadNewestCourses();
+  
+  // Initialize notification component
+  try {
+    initNotificationComponent();
+  } catch (error) {
+    console.error('Error initializing notification component:', error);
+  }
 });
 
 // ===== Auth Initialization =====
@@ -266,23 +276,24 @@ async function handleLogout() {
 // ===== Load Categories =====
 async function loadCategories() {
   try {
+    console.log('Loading categories...');
     const response = await getAllCategories();
+    console.log('Categories response:', response);
     
-    // Handle different response formats
+    // Handle ApiResponse structure: { success, message, data }
     let categories = [];
-    if (response.success) {
-      if (Array.isArray(response.data)) {
-        categories = response.data;
-      } else if (response.data && Array.isArray(response.data.items)) {
-        categories = response.data.items;
-      } else if (Array.isArray(response)) {
-        categories = response;
+    if (response && response.success !== undefined) {
+      // ApiResponse format
+      if (response.success && response.data) {
+        categories = Array.isArray(response.data) ? response.data : [];
       }
     } else if (Array.isArray(response)) {
+      // Direct array response
       categories = response;
     }
     
     if (categories.length > 0) {
+      console.log(`Rendering ${categories.length} categories`);
       renderCategoryNav(categories);
       renderCategoriesGrid(categories);
     } else {
@@ -309,117 +320,262 @@ function renderCategoryNav(categories) {
   
   // Show up to 12 categories in navigation
   const html = categories.slice(0, 12).map(cat => {
-    const categoryName = cat.tenDanhMuc || cat.name || 'Danh mục';
-    const categoryId = cat.id;
+    if (!cat) return '';
+    const categoryName = cat.tenDanhMuc || cat.TenDanhMuc || cat.name || 'Danh mục';
+    const categoryId = cat.id || cat.Id;
+    if (!categoryId) return '';
     return `<a href="${getCategoryCoursesUrl(categoryId)}">${categoryName}</a>`;
-  }).join('');
+  }).filter(html => html !== '').join('');
   
-  elements.categoryNav.innerHTML = html;
+  elements.categoryNav.innerHTML = html || '<p style="color: #999; padding: 12px 0;">Không có danh mục hợp lệ</p>';
 }
 
 function renderCategoriesGrid(categories) {
   if (!elements.categoriesGrid) return;
   
+  if (!categories || categories.length === 0) {
+    elements.categoriesGrid.innerHTML = '<p style="text-align: center; padding: 20px; color: #666;">Không có danh mục nào</p>';
+    return;
+  }
+  
   const icons = ['📚', '💼', '💰', '💻', '📊', '🎯', '🎨', '📱', '🏃', '🎵'];
   
-  const html = categories.map((cat, index) => `
-    <div class="category-card" onclick="window.location.href='${getCategoryCoursesUrl(cat.id)}'">
-      <div class="category-icon">${icons[index % icons.length]}</div>
-      <div class="category-name">${cat.tenDanhMuc}</div>
-      <div class="category-count">${cat.soKhoaHoc || 0} khóa học</div>
-    </div>
-  `).join('');
+  const html = categories.map((cat, index) => {
+    if (!cat) return '';
+    const categoryId = cat.id || cat.Id;
+    const categoryName = cat.tenDanhMuc || cat.TenDanhMuc || 'Danh mục';
+    const courseCount = cat.soKhoaHoc !== undefined ? cat.soKhoaHoc : (cat.SoKhoaHoc !== undefined ? cat.SoKhoaHoc : 0);
+    
+    if (!categoryId) return '';
+    
+    return `
+      <div class="category-card" onclick="window.location.href='${getCategoryCoursesUrl(categoryId)}'">
+        <div class="category-icon">${icons[index % icons.length]}</div>
+        <div class="category-name">${categoryName}</div>
+        <div class="category-count">${courseCount} khóa học</div>
+      </div>
+    `;
+  }).filter(html => html !== '').join('');
   
-  elements.categoriesGrid.innerHTML = html;
+  elements.categoriesGrid.innerHTML = html || '<p style="text-align: center; padding: 20px; color: #666;">Không có danh mục hợp lệ</p>';
+}
+
+// ===== Load Cart Count =====
+async function loadCartCount() {
+  if (!elements.cartBadge) return;
+  
+  try {
+    if (AuthHelper.isLoggedIn()) {
+      const response = await getCartCount();
+      
+      // Handle ApiResponse structure
+      if (response && response.success !== undefined) {
+        // ApiResponse format: { success, message, data }
+        if (response.success && response.data !== undefined) {
+          elements.cartBadge.textContent = response.data || 0;
+        } else {
+          elements.cartBadge.textContent = 0;
+        }
+      } else if (typeof response === 'number') {
+        // Direct number response
+        elements.cartBadge.textContent = response;
+      } else {
+        elements.cartBadge.textContent = 0;
+      }
+    } else {
+      elements.cartBadge.textContent = 0;
+    }
+  } catch (error) {
+    console.error('Error loading cart count:', error);
+    if (elements.cartBadge) {
+      elements.cartBadge.textContent = 0;
+    }
+  }
 }
 
 // ===== Load Courses =====
 async function loadFeaturedCourses() {
   try {
+    console.log('Loading featured courses...');
     const response = await getFeaturedCourses(8);
+    console.log('Featured courses response:', response);
     
-    if (response.success && response.data) {
-      renderCourses(response.data, elements.featuredCourses);
+    // Handle ApiResponse structure: { success, message, data }
+    let courses = [];
+    if (response && response.success !== undefined) {
+      // ApiResponse format
+      if (response.success && response.data) {
+        courses = Array.isArray(response.data) ? response.data : [];
+      }
+    } else if (Array.isArray(response)) {
+      // Direct array response
+      courses = response;
+    }
+    
+    if (courses.length > 0) {
+      console.log(`Rendering ${courses.length} featured courses`);
+      renderCourses(courses, elements.featuredCourses);
+    } else {
+      console.warn('No featured courses found');
+      if (elements.featuredCourses) {
+        elements.featuredCourses.innerHTML = '<p style="text-align: center; padding: 20px; color: #666;">Chưa có khóa học nổi bật</p>';
+      }
     }
   } catch (error) {
     console.error('Error loading featured courses:', error);
     if (elements.featuredCourses) {
-      elements.featuredCourses.innerHTML = '<p>Không thể tải khóa học nổi bật</p>';
+      elements.featuredCourses.innerHTML = '<p style="text-align: center; padding: 20px; color: #dc3545;">Không thể tải khóa học nổi bật. Vui lòng thử lại sau.</p>';
     }
   }
 }
 
 async function loadBestSellingCourses() {
   try {
+    console.log('Loading best-selling courses...');
     const response = await getBestSellingCourses(8);
+    console.log('Best-selling courses response:', response);
     
-    if (response.success && response.data) {
-      renderCourses(response.data, elements.bestSellingCourses);
+    // Handle ApiResponse structure: { success, message, data }
+    let courses = [];
+    if (response && response.success !== undefined) {
+      // ApiResponse format
+      if (response.success && response.data) {
+        courses = Array.isArray(response.data) ? response.data : [];
+      }
+    } else if (Array.isArray(response)) {
+      // Direct array response
+      courses = response;
+    }
+    
+    if (courses.length > 0) {
+      console.log(`Rendering ${courses.length} best-selling courses`);
+      renderCourses(courses, elements.bestSellingCourses);
+    } else {
+      console.warn('No best-selling courses found');
+      if (elements.bestSellingCourses) {
+        elements.bestSellingCourses.innerHTML = '<p style="text-align: center; padding: 20px; color: #666;">Chưa có khóa học bán chạy</p>';
+      }
     }
   } catch (error) {
     console.error('Error loading best-selling courses:', error);
     if (elements.bestSellingCourses) {
-      elements.bestSellingCourses.innerHTML = '<p>Không thể tải khóa học bán chạy</p>';
+      elements.bestSellingCourses.innerHTML = '<p style="text-align: center; padding: 20px; color: #dc3545;">Không thể tải khóa học bán chạy. Vui lòng thử lại sau.</p>';
     }
   }
 }
 
 async function loadNewestCourses() {
   try {
+    console.log('Loading newest courses...');
     const response = await getNewestCourses(8);
+    console.log('Newest courses response:', response);
     
-    if (response.success && response.data) {
-      renderCourses(response.data, elements.newestCourses);
+    // Handle ApiResponse structure: { success, message, data }
+    let courses = [];
+    if (response && response.success !== undefined) {
+      // ApiResponse format
+      if (response.success && response.data) {
+        courses = Array.isArray(response.data) ? response.data : [];
+      }
+    } else if (Array.isArray(response)) {
+      // Direct array response
+      courses = response;
+    }
+    
+    if (courses.length > 0) {
+      console.log(`Rendering ${courses.length} newest courses`);
+      renderCourses(courses, elements.newestCourses);
+    } else {
+      console.warn('No newest courses found');
+      if (elements.newestCourses) {
+        elements.newestCourses.innerHTML = '<p style="text-align: center; padding: 20px; color: #666;">Chưa có khóa học mới</p>';
+      }
     }
   } catch (error) {
     console.error('Error loading newest courses:', error);
     if (elements.newestCourses) {
-      elements.newestCourses.innerHTML = '<p>Không thể tải khóa học mới nhất</p>';
+      elements.newestCourses.innerHTML = '<p style="text-align: center; padding: 20px; color: #dc3545;">Không thể tải khóa học mới nhất. Vui lòng thử lại sau.</p>';
     }
   }
 }
 
 // ===== Render Courses =====
 function renderCourses(courses, container) {
-  if (!container) return;
-  
-  if (!courses || courses.length === 0) {
-    container.innerHTML = '<p>Không có khóa học nào</p>';
+  if (!container) {
+    console.warn('Container not found for rendering courses');
     return;
   }
   
-  const html = courses.map(course => `
-    <div class="course-card" onclick="window.location.href='${getCourseUrl(course.id)}'">
-      <img src="${course.hinhDaiDien || DEFAULT_IMAGES.COURSE}" 
-           alt="${course.tenKhoaHoc}" 
-           class="course-image"
-           onerror="this.src='${DEFAULT_IMAGES.COURSE}'">
-      <div class="course-body">
-        <h3 class="course-title">${course.tenKhoaHoc}</h3>
-        <p class="course-instructor">${course.tenGiangVien || 'Giảng viên'}</p>
-        
-        ${course.diemDanhGia ? `
-        <div class="course-rating">
-          <span class="rating-number">${course.diemDanhGia.toFixed(1)}</span>
-          <span class="stars">${getStars(course.diemDanhGia)}</span>
-          <span class="rating-count">${formatRatingCount(course.soLuongDanhGia)}</span>
-        </div>
-        ` : ''}
-        
-        <p class="course-stats">
-          ${formatStudentCount(course.soLuongHocVien)}
-        </p>
-        
-        <div class="course-price">
-          ${formatPrice(course.giaBan)}
-        </div>
-        
-        ${course.mucDo ? `
-        <span class="course-level">${course.mucDo}</span>
-        ` : ''}
-      </div>
-    </div>
-  `).join('');
+  if (!courses || courses.length === 0) {
+    container.innerHTML = '<p style="text-align: center; padding: 20px; color: #666;">Không có khóa học nào</p>';
+    return;
+  }
   
-  container.innerHTML = html;
+  const html = courses.map(course => {
+    // Validate course data
+    if (!course) {
+      console.warn('Invalid course data:', course);
+      return '';
+    }
+    
+    const courseId = course.id || course.Id;
+    const courseTitle = course.tenKhoaHoc || course.TenKhoaHoc || 'Khóa học';
+    const courseImage = course.hinhDaiDien || course.HinhDaiDien || DEFAULT_IMAGES.COURSE;
+    const instructorName = course.tenGiangVien || course.TenGiangVien || 'Giảng viên';
+    const rating = course.diemDanhGia || course.DiemDanhGia || 0;
+    const ratingCount = course.soLuongDanhGia || course.SoLuongDanhGia || 0;
+    const studentCount = course.soLuongHocVien || course.SoLuongHocVien || 0;
+    const price = course.giaBan !== undefined ? course.giaBan : (course.GiaBan !== undefined ? course.GiaBan : 0);
+    const level = course.mucDo || course.MucDo || '';
+    
+    // Build image URL - handle relative paths
+    let imageUrl = courseImage;
+    if (courseImage && !courseImage.startsWith('http') && !courseImage.startsWith('data:')) {
+      // If it's a relative path, prepend API base URL or handle accordingly
+      if (courseImage.startsWith('/')) {
+        imageUrl = `http://localhost:5228${courseImage}`;
+      } else {
+        imageUrl = `http://localhost:5228/${courseImage}`;
+      }
+    }
+    
+    return `
+      <div class="course-card" onclick="window.location.href='${getCourseUrl(courseId)}'">
+        <img src="${imageUrl}" 
+             alt="${courseTitle}" 
+             class="course-image"
+             onerror="this.src='${DEFAULT_IMAGES.COURSE}'">
+        <div class="course-body">
+          <h3 class="course-title">${courseTitle}</h3>
+          <p class="course-instructor">${instructorName}</p>
+          
+          ${rating > 0 ? `
+          <div class="course-rating">
+            <span class="rating-number">${rating.toFixed(1)}</span>
+            <span class="stars">${getStars(rating)}</span>
+            <span class="rating-count">${formatRatingCount(ratingCount)}</span>
+          </div>
+          ` : '<div class="course-rating"><span class="rating-count">Chưa có đánh giá</span></div>'}
+          
+          <p class="course-stats">
+            ${formatStudentCount(studentCount)}
+          </p>
+          
+          <div class="course-price">
+            ${formatPrice(price)}
+          </div>
+          
+          ${level ? `
+          <span class="course-level">${level}</span>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }).filter(html => html !== '').join('');
+  
+  if (html) {
+    container.innerHTML = html;
+  } else {
+    container.innerHTML = '<p style="text-align: center; padding: 20px; color: #666;">Không có khóa học hợp lệ để hiển thị</p>';
+  }
 }

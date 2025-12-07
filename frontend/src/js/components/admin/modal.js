@@ -127,4 +127,39 @@ export class Modal {
       overlay.remove();
     }
   }
+
+  // Static methods for convenience
+  static currentModal = null;
+
+  static show(config) {
+    // Close existing modal if any
+    if (Modal.currentModal) {
+      Modal.currentModal.destroy();
+    }
+
+    const modal = new Modal({
+      id: 'dynamic-modal',
+      ...config
+    });
+
+    const modalRoot = document.getElementById('modal-root');
+    if (modalRoot) {
+      modalRoot.innerHTML = modal.render();
+      modal.attachEventListeners();
+      modal.open();
+      Modal.currentModal = modal;
+    }
+  }
+
+  static close() {
+    if (Modal.currentModal) {
+      Modal.currentModal.close();
+      Modal.currentModal.destroy();
+      Modal.currentModal = null;
+    }
+  }
+
+  static isOpen() {
+    return Modal.currentModal && Modal.currentModal.isOpen;
+  }
 }

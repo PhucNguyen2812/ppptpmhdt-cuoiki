@@ -61,6 +61,10 @@ builder.Services.AddScoped<IGioHangService, GioHangService>();
 builder.Services.AddScoped<IVideoUploadService, VideoUploadService>();
 builder.Services.AddScoped<IVoucherService, VoucherService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IInstructorRequestService, InstructorRequestService>();
+builder.Services.AddScoped<IKiemDuyetKhoaHocService, KiemDuyetKhoaHocService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IDanhGiaService, DanhGiaService>();
 
 // authentication & authorization
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -105,7 +109,7 @@ builder.Services.AddCors(options =>
 
 // seed data initializer (commented out to prevent duplicate data on each run)
 // builder.Services.AddTransient<DataInitializer>();
-
+Stripe.StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 var app = builder.Build();
 
 app.UseCors("AllowFrontend");
@@ -134,10 +138,12 @@ var uploadsPath = Path.Combine(app.Environment.WebRootPath ?? "wwwroot", "upload
 var videosPath = Path.Combine(uploadsPath, "videos");
 var avatarsPath = Path.Combine(uploadsPath, "avatars");
 var courseIntroPath = Path.Combine(uploadsPath, "course-intro");
+var chungchiPath = Path.Combine(uploadsPath, "chungchi");
 
 if (!Directory.Exists(videosPath)) Directory.CreateDirectory(videosPath);
 if (!Directory.Exists(avatarsPath)) Directory.CreateDirectory(avatarsPath);
 if (!Directory.Exists(courseIntroPath)) Directory.CreateDirectory(courseIntroPath);
+if (!Directory.Exists(chungchiPath)) Directory.CreateDirectory(chungchiPath);
 
 // Serve static files (for uploaded avatars, images, videos, etc.)
 app.UseStaticFiles();

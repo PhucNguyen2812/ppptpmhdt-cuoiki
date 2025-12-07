@@ -18,7 +18,9 @@ namespace khoahoconline.Services
         /// <summary>
         /// Lấy nội dung khóa học (curriculum)
         /// </summary>
-        Task<CurriculumDto> GetCurriculumAsync(int id);
+        /// <param name="id">ID khóa học</param>
+        /// <param name="userId">ID người dùng (null nếu chưa đăng nhập)</param>
+        Task<CurriculumDto> GetCurriculumAsync(int id, int? userId = null);
 
         /// <summary>
         /// Lấy khóa học nổi bật
@@ -66,39 +68,10 @@ namespace khoahoconline.Services
         Task<bool> HideCourseAsync(int courseId, int instructorId);
 
         /// <summary>
-        /// Hiển thị lại khóa học (Instructor) - Cần duyệt lại
+        /// Hiển thị lại khóa học (Instructor)
         /// </summary>
         Task<bool> UnhideCourseAsync(int courseId, int instructorId);
 
-        /// <summary>
-        /// Lấy danh sách khóa học chờ duyệt (Admin/Reviewer)
-        /// </summary>
-        Task<List<KiemDuyetKhoaHocDto>> GetPendingCoursesAsync();
-
-        /// <summary>
-        /// Lấy tất cả khóa học với trạng thái kiểm duyệt (Admin/Reviewer)
-        /// </summary>
-        Task<List<KiemDuyetKhoaHocDto>> GetAllCourseApprovalsAsync(string? status = null);
-
-        /// <summary>
-        /// Duyệt khóa học (Admin/Reviewer)
-        /// </summary>
-        Task<bool> ApproveCourseAsync(int courseId, ApproveCourseDto dto, int reviewerId);
-
-        /// <summary>
-        /// Từ chối khóa học (Admin/Reviewer)
-        /// </summary>
-        Task<bool> RejectCourseAsync(int courseId, RejectCourseDto dto, int reviewerId);
-
-        /// <summary>
-        /// Ẩn khóa học (Admin/Reviewer) - Tạo approval record với status BiAn
-        /// </summary>
-        Task<bool> HideCourseByAdminAsync(int courseId, ApproveCourseDto dto, int reviewerId);
-
-        /// <summary>
-        /// Bỏ ẩn khóa học (Admin/Reviewer) - Tạo approval record với status DaDuyet và hiển thị lại
-        /// </summary>
-        Task<bool> UnhideCourseByAdminAsync(int courseId, ApproveCourseDto dto, int reviewerId);
 
         /// <summary>
         /// Lấy khóa học với curriculum cho instructor để chỉnh sửa
@@ -110,9 +83,5 @@ namespace khoahoconline.Services
         /// </summary>
         Task<KhoaHocDto> UpdateCourseWithCurriculumAsync(int courseId, UpdateCourseWithCurriculumDto dto, int instructorId);
 
-        /// <summary>
-        /// Lấy khóa học với curriculum cho admin/reviewer để xem (không cần ownership)
-        /// </summary>
-        Task<CreateCourseWithCurriculumDto> GetCourseForReviewAsync(int courseId);
     }
 }

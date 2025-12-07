@@ -14,7 +14,10 @@ namespace khoahoconline.Data.Repositories.Impl
         private DanhMucRepository? _danhMucRepository;
         private KhoaHocRepository? _khoaHocRepository;
         private GioHangRepository? _gioHangRepository;
+        private NotificationRepository? _notificationRepository;
+        private YeuCauDangKyGiangVienRepository? _yeuCauDangKyGiangVienRepository;
         private KiemDuyetKhoaHocRepository? _kiemDuyetKhoaHocRepository;
+        private DanhGiaRepository? _danhGiaRepository;
 
         public UnitOfWork(CourseOnlDbContext context)
         {
@@ -39,8 +42,17 @@ namespace khoahoconline.Data.Repositories.Impl
         public IGioHangRepository GioHangRepository =>
             _gioHangRepository ??= new GioHangRepository(_context);
 
+        public INotificationRepository NotificationRepository =>
+            _notificationRepository ??= new NotificationRepository(_context);
+
+        public IYeuCauDangKyGiangVienRepository YeuCauDangKyGiangVienRepository =>
+            _yeuCauDangKyGiangVienRepository ??= new YeuCauDangKyGiangVienRepository(_context);
+
         public IKiemDuyetKhoaHocRepository KiemDuyetKhoaHocRepository =>
             _kiemDuyetKhoaHocRepository ??= new KiemDuyetKhoaHocRepository(_context);
+
+        public IDanhGiaRepository DanhGiaRepository =>
+            _danhGiaRepository ??= new DanhGiaRepository(_context);
 
         public async Task BeginTransactionAsync()
         {
@@ -73,6 +85,11 @@ namespace khoahoconline.Data.Repositories.Impl
         public async Task<int> SaveChangesAsync()
         {
             return await _context.SaveChangesAsync();
+        }
+
+        public Data.CourseOnlDbContext GetDbContext()
+        {
+            return _context;
         }
     }
 }

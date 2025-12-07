@@ -20,5 +20,10 @@ namespace khoahoconline.Data.Repositories.Impl
             vaiTroEntity!.TrangThai = false;
             return Task.CompletedTask;
         }
+
+        public async Task<List<VaiTro>> GetAllAsync()
+        {
+            return await _dbSet.Where(vt => vt.TrangThai == true).ToListAsync();
+        }
     }
 }

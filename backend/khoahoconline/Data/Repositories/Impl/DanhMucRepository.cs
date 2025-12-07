@@ -26,7 +26,7 @@ namespace khoahoconline.Data.Repositories.Impl
                 .ToListAsync();
         }
 
-        public async Task<DanhMucKhoaHoc?> GetByIdAsync(int id)
+        public new async Task<DanhMucKhoaHoc?> GetByIdAsync(int id)
         {
             return await _dbSet
                 .AsNoTracking()
